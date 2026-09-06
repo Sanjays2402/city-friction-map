@@ -1,3 +1,4 @@
+import { InputError } from "./errors.js";
 export const categories = {
   queue: { label: "Long queues", icon: "◷", color: "#c17b20", minutes: 35 },
   access: { label: "Access issues", icon: "↗", color: "#b65252", minutes: 240 },
@@ -22,7 +23,7 @@ export function distance(a, b) {
 }
 export function validateReport(body) {
   if (!body || !Object.hasOwn(categories, body.category))
-    throw new Error("Choose a valid category.");
+    throw new InputError("Choose a valid category.");
   for (const [field, max] of [
     ["title", 100],
     ["location", 100],
@@ -33,7 +34,7 @@ export function validateReport(body) {
       body[field].trim().length < (field === "description" ? 0 : 3) ||
       body[field].length > max
     )
-      throw new Error(`Invalid ${field} (maximum ${max} characters).`);
+      throw new InputError(`Invalid ${field} (maximum ${max} characters).`);
   }
   if (
     !Number.isFinite(body.lat) ||
@@ -43,9 +44,9 @@ export function validateReport(body) {
     body.lng < -122.53 ||
     body.lng > -122.35
   )
-    throw new Error("Choose a location within San Francisco.");
+    throw new InputError("Choose a location within San Francisco.");
   if (![1, 2, 3].includes(body.severity))
-    throw new Error("Choose a valid impact level.");
+    throw new InputError("Choose a valid impact level.");
   return {
     ...body,
     title: body.title.trim(),

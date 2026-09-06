@@ -1,6 +1,7 @@
 import { DatabaseSync } from "node:sqlite";
 import { randomUUID } from "node:crypto";
 import { findDuplicate, prediction, validateReport } from "./domain.js";
+import { InputError } from "./errors.js";
 export function createStore(path = ":memory:", seed = true) {
   const db = new DatabaseSync(path);
   db.exec(
@@ -15,6 +16,17 @@ export function createStore(path = ":memory:", seed = true) {
     db
       .prepare("INSERT OR REPLACE INTO reports VALUES (?,?)")
       .run(r.id, JSON.stringify(r));
+  const transaction = (operation) => {
+    db.exec("BEGIN IMMEDIATE");
+    try {
+      const result = operation();
+      db.exec("COMMIT");
+      return result;
+    } catch (error) {
+      db.exec("ROLLBACK");
+      throw error;
+    }
+  };
   if (seed && !all().length) {
     const rows = [
       [
@@ -182,40 +194,45 @@ export function createStore(path = ":memory:", seed = true) {
         createdAt: Date.now(),
         updatedAt: Date.now(),
       };
-      save(report);
-      db.prepare("INSERT INTO votes VALUES (?,?,?)").run(
-        report.id,
-        visitor,
-        "confirm",
-      );
+      transaction(() => {
+        save(report);
+        db.prepare("INSERT INTO votes VALUES (?,?,?)").run(
+          report.id,
+          visitor,
+          "confirm",
+        );
+      });
       return {
         report: { ...report, prediction: prediction(report) },
         merged: false,
       };
     },
     vote(id, visitor, action) {
-      if (!["confirm", "clear"].includes(action))
-        throw new Error("Unknown action.");
-      const r = all().find((r) => r.id === id);
-      if (!r) throw new Error("Report not found.");
-      if (r.status !== "active")
-        throw new Error("This report has already cleared.");
-      const insert = db
-        .prepare("INSERT OR IGNORE INTO votes VALUES (?,?,?)")
-        .run(id, visitor, action);
-      if (!insert.changes) throw new Error("You already sent this update.");
-      if (action === "confirm") {
-        r.confirmations++;
-        r.updatedAt = Date.now();
-      } else {
-        r.clearVotes++;
-        if (r.clearVotes >= 2) {
-          r.status = "resolved";
-          r.resolvedAt = Date.now();
+      return transaction(() => {
+        if (!["confirm", "clear"].includes(action))
+          throw new InputError("Unknown action.");
+        const r = all().find((r) => r.id === id);
+        if (!r) throw new InputError("Report not found.", 404);
+        if (r.status !== "active")
+          throw new InputError("This report has already cleared.", 409);
+        const insert = db
+          .prepare("INSERT OR IGNORE INTO votes VALUES (?,?,?)")
+          .run(id, visitor, action);
+        if (!insert.changes)
+          throw new InputError("You already sent this update.", 409);
+        if (action === "confirm") {
+          r.confirmations++;
+          r.updatedAt = Date.now();
+        } else {
+          r.clearVotes++;
+          if (r.clearVotes >= 2) {
+            r.status = "resolved";
+            r.resolvedAt = Date.now();
+          }
         }
-      }
-      save(r);
-      return { ...r, prediction: prediction(r) };
+        save(r);
+        return { ...r, prediction: prediction(r) };
+      });
     },
     close: () => db.close(),
   };

@@ -45,6 +45,8 @@ The server binds to localhost by default. Set `HOST=0.0.0.0` when deliberately e
 
 **Storage.** The application runs as one Node process with synchronous SQLite operations. Persistent hosting needs a writable disk; an ephemeral/serverless filesystem will lose data. Demo data seeds only when the report table is empty. Polling is intentionally simple; SSE is a natural extension.
 
+Report creation and vote updates use SQLite transactions so failures cannot leave a counted vote without its corresponding report update. HTTP errors distinguish invalid input (400), forbidden origins (403), missing reports (404), conflicting votes (409), oversized requests (413), and unsupported content types (415). Unexpected storage errors return a generic 500 response without exposing database details.
+
 ## API
 
 | Method | Endpoint                | Behavior                           |
@@ -68,6 +70,8 @@ npm run test:e2e
 ```
 
 Unit tests cover geographic distance, duplicate boundaries, invalid input, stale predictions, duplicate voting, and clearance quorum. Browser tests cover filtering, report creation, reload persistence, multi-visitor clearance, and mobile overflow. GitHub Actions runs the build and both test suites on pushes and pull requests.
+
+HTTP integration tests exercise status codes, malformed JSON, origin checks, and body limits. Persistence tests reopen a real temporary SQLite database and inject a storage failure to verify transaction rollback. Browser tests run against the production build, with map tile requests blocked.
 
 ## Credits
 
