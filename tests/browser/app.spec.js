@@ -52,3 +52,37 @@ test("mobile layout fits the viewport", async ({ page }) => {
     ),
   ).toBe(true);
 });
+
+test("save, reload, share, filter and sort reports", async ({ page }) => {
+  await page.goto("/");
+  await page.locator("#major-only").check();
+  await expect(page.locator(".report-card")).toHaveCount(2);
+  await page.locator("#sort").selectOption("confirmed");
+  await expect(page.locator(".report-card").first()).toContainText(
+    "Elevator out of service",
+  );
+  await page.locator(".report-card").first().click();
+  const shared = page.url();
+  await expect(page).toHaveURL(/\?report=/);
+  await page.locator("#save-report").click();
+  await expect(page.locator("#save-report")).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await page.reload();
+  await expect(page.locator("#detail")).toContainText(
+    "Elevator out of service",
+  );
+  await page.locator("#saved-toggle").click();
+  await expect(page.locator(".report-card")).toHaveCount(1);
+  await page.locator("#hide-demo").check();
+  await expect(page.locator(".report-card")).toHaveCount(0);
+  await page.locator("#reset-filters").click();
+  await page.goto(shared);
+  await expect(page.locator("#detail")).toContainText(
+    "Elevator out of service",
+  );
+  await page.locator("#save-report").click();
+  await page.locator("#saved-toggle").click();
+  await expect(page.locator(".report-card")).toHaveCount(0);
+});

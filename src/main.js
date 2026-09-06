@@ -2,6 +2,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "./style.css";
 import { categories } from "../server/domain.js";
+import { filterReports, summarize, readSaved } from "./discovery.js";
 const $ = (s) => document.querySelector(s),
   escape = (s) =>
     String(s).replace(
@@ -26,6 +27,12 @@ let reports = [],
   selected = null,
   status = "active",
   lastUpdated = null;
+const saved = readSaved(localStorage);
+let majorOnly = false,
+  hideDemo = false,
+  savedOnly = false,
+  sort = "recent";
+let initialReport = new URL(location.href).searchParams.get("report");
 $("#app").innerHTML = `
 <header><a class="brand" href="/" aria-label="City Friction home"><span class="brand-icon">↗</span> city<span>friction</span><sup>SF</sup></a><nav><span class="nav-active">Explore the city</span><button id="about">How it works ↗</button></nav><button class="primary" id="report">＋ Report friction</button></header>
 <main><section class="intro"><div><div class="eyebrow">A LITTLE LOCAL KNOWLEDGE GOES A LONG WAY</div><h1>Less friction.<br class="mobile-break"> More city.</h1><p>The little things between you and a good day. See them coming.</p></div><div class="city"><span class="pulse"></span> San Francisco <small>Community map · Demo enabled</small></div></section>
@@ -47,6 +54,14 @@ $("#app").innerHTML = `
     "",
   )}</select></label><label>Short headline<input name="title" required minlength="3" maxlength="100" placeholder="e.g. Sidewalk blocked by roadwork"></label><label>Place or intersection<input name="location" required minlength="3" maxlength="100" placeholder="e.g. Market & 8th Street"></label><div class="form-row"><label>Latitude<input name="lat" type="number" step="any" min="37.70" max="37.84" required></label><label>Longitude<input name="lng" type="number" step="any" min="-122.53" max="-122.35" required></label></div><label>Impact<select name="severity"><option value="1">Minor · a little inconvenient</option><option value="2" selected>Moderate · plan around it</option><option value="3">Major · significant obstacle</option></select></label><label>Anything useful to know?<textarea name="description" maxlength="500" rows="3" placeholder="What would you tell a friend walking this way?"></textarea></label><p class="form-note">Similar reports within 90 meters may be merged. Reports are visible to everyone using this server.</p><p id="form-error" role="alert"></p><button class="primary submit" type="submit">Put it on the map ↗</button></form></dialog>
 <dialog id="about-dialog"><button class="close" aria-label="Close explanation">×</button><div class="eyebrow">A SHARED PICTURE OF YOUR CITY</div><h2>Little reports. Real usefulness.</h2><p>Report an obstacle, confirm it’s still there, or tell your neighbors it has cleared. Two independent browser clearance votes resolve an issue.</p><h3>How estimates work</h3><p>Time ranges use category and impact, measured from the latest confirmation. They’re heuristic estimates, not trained forecasts. More confirmations improve the evidence label, but confidence is never a statistical probability.</p><h3>An honest starting point</h3><p>Initial San Francisco reports are fictional and labeled DEMO. New reports are saved in SQLite and shared across connected browsers. Updates refresh every 15 seconds. Anonymous browser IDs prevent casual repeated votes, but are not identity verification.</p></dialog><div id="toast" role="status"></div>`;
+$(".toolbar").insertAdjacentHTML(
+  "beforebegin",
+  '<section id="summary" class="summary" aria-label="City overview"></section>',
+);
+$(".toolbar").insertAdjacentHTML(
+  "afterend",
+  `<section class="discovery-controls" aria-label="Report preferences"><div><button id="saved-toggle" class="preference" aria-pressed="false">☆ Saved reports <span id="saved-count">0</span></button><label><input id="major-only" type="checkbox"> Major impact only</label><label><input id="hide-demo" type="checkbox"> Hide demo reports</label></div><label class="sort-label">Sort by <select id="sort"><option value="recent">Latest update</option><option value="impact">Highest impact</option><option value="confirmed">Most confirmed</option></select></label></section>`,
+);
 const map = L.map("map", { zoomControl: false }).setView(
   [37.775, -122.421],
   14,
@@ -93,14 +108,20 @@ function age(t) {
       : `${Math.floor(mins / 60)}h ago`;
 }
 function visible() {
-  return reports.filter(
-    (r) =>
-      r.status === status &&
-      (category === "all" || r.category === category) &&
-      `${r.title} ${r.location} ${r.description}`.toLowerCase().includes(query),
+  return filterReports(
+    reports,
+    { status, category, query, majorOnly, hideDemo, savedOnly, sort },
+    saved,
   );
 }
 function render() {
+  const stats = summarize(reports.filter((r) => !hideDemo || !r.demo));
+  $("#summary").innerHTML =
+    `<div><span class="summary-symbol">◉</span><strong>${stats.active}</strong><span>Active heads-ups</span></div><div><span class="summary-symbol red">↗</span><strong>${stats.major}</strong><span>Major obstacles</span></div><div><span class="summary-symbol amber">◷</span><strong>${stats.stale}</strong><span>Need a fresh update</span></div><div><span class="summary-symbol">✓</span><strong>${stats.resolved}</strong><span>Community cleared</span></div><small>Citywide · ${hideDemo ? "community reports only" : "includes demo data"}</small>`;
+  $("#saved-count").textContent = reports.filter((r) => saved.has(r.id)).length;
+  $(".city small").textContent = reports.some((r) => r.demo)
+    ? "Community map · Includes demo data"
+    : "Community map · Shared reports";
   const rows = visible();
   $("#count").textContent =
     `${rows.length} ${status === "active" ? "active heads-ups" : "cleared reports"} · all mapped areas`;
@@ -111,7 +132,7 @@ function render() {
           return `<button class="report-card ${selected === r.id ? "chosen" : ""}" data-id="${r.id}"><div class="card-top"><span class="category-icon" style="--accent:${c.color}">${c.icon}</span><span class="category-label">${c.label}</span>${r.demo ? '<span class="demo">DEMO</span>' : ""}<span class="age">${age(r.updatedAt)}</span></div><h3>${escape(r.title)}</h3><p class="place">${escape(r.location)}</p><div class="card-bottom"><span class="estimate">${r.status === "resolved" ? "✓ Cleared" : `◷ ${escape(r.prediction.label)}`}</span><span>♧ ${r.confirmations} confirmations</span></div></button>`;
         })
         .join("")
-    : '<div class="empty"><span>☀</span><h3>A little breathing room.</h3><p>No reports match these filters.</p></div>';
+    : `<div class="empty"><span>${savedOnly ? "☆" : "☀"}</span><h3>${savedOnly ? "Keep useful updates close." : "A little breathing room."}</h3><p>${savedOnly ? "Open any report and save it to find it here." : "No reports match these filters."}</p><button id="reset-filters">Reset filters</button></div>`;
   markers.clearLayers();
   rows.forEach((r) => {
     const c = categories[r.category];
@@ -135,6 +156,9 @@ function render() {
 function select(id) {
   selected = id;
   const r = reports.find((x) => x.id === id);
+  const url = new URL(location.href);
+  url.searchParams.set("report", id);
+  history.replaceState(null, "", url);
   map.flyTo([r.lat, r.lng], 15, { duration: 0.5 });
   render();
 }
@@ -148,11 +172,25 @@ function renderDetail() {
   $("#detail").hidden = false;
   $("#detail").innerHTML =
     `<button class="close" id="close-detail" aria-label="Close report details">×</button><div class="eyebrow" style="color:${c.color}">${c.label}${r.demo ? " · FICTIONAL DEMO" : ""}</div><h2>${escape(r.title)}</h2><p class="place">${escape(r.location)}</p><p>${escape(r.description)}</p><div class="prediction"><span>Estimated time to clear<strong>${r.status === "resolved" ? "Cleared" : escape(r.prediction.label)}</strong></span><span class="confidence">${r.prediction.confidence} confidence</span></div><p class="detail-note">Category-based estimate · ${r.confirmations} confirmations · ${r.clearVotes}/2 clearance votes</p>${r.status === "active" ? '<div class="detail-actions"><button class="primary" data-vote="confirm">Still here +1</button><button data-vote="clear">✓ Looks clear</button></div>' : "<p>✓ The community marked this cleared.</p>"}`;
+  $("#detail").insertAdjacentHTML(
+    "beforeend",
+    `<div class="report-tools"><button id="save-report" aria-pressed="${saved.has(r.id)}">${saved.has(r.id) ? "★ Saved" : "☆ Save report"}</button><button id="share-report">Copy report link ↗</button></div><div class="impact-line">${["", "Minor inconvenience", "Moderate impact", "Major obstacle"][r.severity]} · First reported ${age(r.createdAt)}</div>`,
+  );
 }
 async function refresh() {
   try {
     reports = await api("/reports");
     lastUpdated = Date.now();
+    if (initialReport) {
+      const target = reports.find((r) => r.id === initialReport);
+      initialReport = null;
+      if (target) {
+        status = target.status;
+        $("#active-tab").classList.toggle("selected", status === "active");
+        $("#resolved-tab").classList.toggle("selected", status === "resolved");
+        select(target.id);
+      } else toast("This shared report could not be found on this server.");
+    }
     render();
   } catch (e) {
     $("#count").textContent = "Could not load reports.";
@@ -161,6 +199,10 @@ async function refresh() {
   }
 }
 $("#list").addEventListener("click", (e) => {
+  if (e.target.closest("#reset-filters")) {
+    resetFilters();
+    return;
+  }
   const card = e.target.closest("[data-id]");
   if (card) select(card.dataset.id);
 });
@@ -175,6 +217,38 @@ $("#filters").addEventListener("click", (e) => {
   $("#detail").hidden = true;
   render();
 });
+function resetFilters() {
+  category = "all";
+  query = "";
+  majorOnly = false;
+  hideDemo = false;
+  savedOnly = false;
+  $("#search").value = "";
+  $("#major-only").checked = false;
+  $("#hide-demo").checked = false;
+  $("#saved-toggle").setAttribute("aria-pressed", "false");
+  document
+    .querySelectorAll(".chip")
+    .forEach((b) => b.classList.toggle("active", b.dataset.category === "all"));
+  render();
+}
+$("#saved-toggle").onclick = () => {
+  savedOnly = !savedOnly;
+  $("#saved-toggle").setAttribute("aria-pressed", String(savedOnly));
+  render();
+};
+$("#major-only").onchange = (e) => {
+  majorOnly = e.target.checked;
+  render();
+};
+$("#hide-demo").onchange = (e) => {
+  hideDemo = e.target.checked;
+  render();
+};
+$("#sort").onchange = (e) => {
+  sort = e.target.value;
+  render();
+};
 $("#search").addEventListener("input", (e) => {
   query = e.target.value.toLowerCase();
   render();
@@ -192,8 +266,32 @@ for (const [selector, value] of [
     render();
   };
 $("#detail").onclick = async (e) => {
+  if (e.target.closest("#save-report")) {
+    const removing = saved.has(selected);
+    if (removing) saved.delete(selected);
+    else saved.add(selected);
+    try {
+      localStorage.setItem("friction-saved", JSON.stringify([...saved]));
+    } catch {
+      toast("Saved for this session. Browser storage is unavailable.");
+    }
+    render();
+    return;
+  }
+  if (e.target.closest("#share-report")) {
+    try {
+      await navigator.clipboard.writeText(location.href);
+      toast("Report link copied. It opens on this same server.");
+    } catch {
+      toast("Copy the report link from your browser’s address bar.");
+    }
+    return;
+  }
   if (e.target.closest("#close-detail")) {
     selected = null;
+    const url = new URL(location.href);
+    url.searchParams.delete("report");
+    history.replaceState(null, "", url);
     $("#detail").hidden = true;
     render();
     return;
@@ -240,6 +338,12 @@ $("#report-form").onsubmit = async (e) => {
     $("#report-dialog").close();
     e.target.reset();
     status = "active";
+    majorOnly = false;
+    hideDemo = false;
+    savedOnly = false;
+    $("#major-only").checked = false;
+    $("#hide-demo").checked = false;
+    $("#saved-toggle").setAttribute("aria-pressed", "false");
     category = "all";
     query = "";
     $("#search").value = "";
