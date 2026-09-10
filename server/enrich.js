@@ -1,42 +1,40 @@
 import express from "express";
+import { cityById, DEFAULT_CITY } from "./cities.js";
 
 // Server-side proxies for free, keyless public data sources. Each endpoint
 // caches the upstream response for 60 seconds, aborts slow upstreams after
 // 8 seconds, and answers { available: false } instead of failing the page
 // when an upstream is unreachable. Read-only GETs: no visitor id required.
+// Pass ?city=<id> to scope weather, air quality, NWS alerts, and bikeshare
+// to a supported city; 311 cases are San Francisco only.
 const TTL_MS = 60_000;
 const TIMEOUT_MS = 8_000;
-const SF = { minLat: 37.7, maxLat: 37.84, minLng: -122.53, maxLng: -122.35 };
 
-const GBFS_INFO = "https://gbfs.baywheels.com/gbfs/en/station_information.json";
-const GBFS_STATUS = "https://gbfs.baywheels.com/gbfs/en/station_status.json";
-const SF_311 =
-  "https://data.sfgov.org/resource/vw6y-z8j6.json?$limit=100&$order=requested_datetime%20DESC";
-const OPEN_METEO =
-  "https://api.open-meteo.com/v1/forecast?latitude=37.7749&longitude=-122.4194&current=temperature_2m,weather_code,wind_speed_10m";
-const AIR_QUALITY =
-  "https://air-quality-api.open-meteo.com/v1/air-quality?latitude=37.7749&longitude=-122.4194&current=us_aqi,pm2_5";
-const NWS_ALERTS =
-  "https://api.weather.gov/alerts/active?point=37.7749,-122.4194";
+const OPEN_METEO = (lat, lng) =>
+  `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,weather_code,wind_speed_10m`;
+const AIR_QUALITY = (lat, lng) =>
+  `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lng}&current=us_aqi,pm2_5`;
+const NWS_ALERTS = (lat, lng) =>
+  `https://api.weather.gov/alerts/active?point=${lat},${lng}`;
 const NWS_UA =
-  "CityFrictionMap/1.4.0 (community map demo; contact via GitHub Sanjays2402/city-friction-map)";
+  "CityFrictionMap/1.5.0 (community map demo; contact via GitHub Sanjays2402/city-friction-map)";
 
-const inSF = (lat, lng) =>
+const inBounds = (city, lat, lng) =>
   Number.isFinite(lat) &&
   Number.isFinite(lng) &&
-  lat >= SF.minLat &&
-  lat <= SF.maxLat &&
-  lng >= SF.minLng &&
-  lng <= SF.maxLng;
+  lat >= city.bounds.lat[0] &&
+  lat <= city.bounds.lat[1] &&
+  lng >= city.bounds.lng[0] &&
+  lng <= city.bounds.lng[1];
 
-function projectBikeshare(info, status) {
+function projectBikeshare(city, info, status) {
   const live = new Map();
   for (const s of status?.data?.stations || []) live.set(s.station_id, s);
   const stations = [];
   for (const s of info?.data?.stations || []) {
     const lat = Number(s.lat);
     const lng = Number(s.lon);
-    if (!inSF(lat, lng)) continue;
+    if (!inBounds(city, lat, lng)) continue;
     const st = live.get(s.station_id) || {};
     stations.push({
       id: s.station_id,
@@ -52,7 +50,7 @@ function projectBikeshare(info, status) {
   return { available: true, updatedAt: Date.now(), stations };
 }
 
-function project311(rows) {
+function project311(city, rows) {
   const cases = [];
   for (const r of Array.isArray(rows) ? rows : []) {
     let lat = Number(r.lat);
@@ -60,7 +58,7 @@ function project311(rows) {
     if (!Number.isFinite(lat) && r.point?.coordinates) {
       [lng, lat] = r.point.coordinates.map(Number);
     }
-    if (!inSF(lat, lng)) continue;
+    if (!inBounds(city, lat, lng)) continue;
     cases.push({
       id: r.service_request_id,
       type: r.service_name || "311 case",
@@ -173,47 +171,60 @@ export function createEnrichRouter(options = {}) {
     return res.json();
   }
 
-  router.get("/bikeshare", async (_, res) => {
+  const cityOf = (req) => cityById(req.query.city) || cityById(DEFAULT_CITY);
+
+  router.get("/bikeshare", async (req, res) => {
+    const city = cityOf(req);
+    if (!city.bikeshare) return res.json({ available: false });
     res.json(
-      await cached("bikeshare", async (signal) => {
+      await cached(`bikeshare:${city.id}`, async (signal) => {
         const [info, status] = await Promise.all([
-          getJson(GBFS_INFO, signal),
-          getJson(GBFS_STATUS, signal),
+          getJson(city.bikeshare.info, signal),
+          getJson(city.bikeshare.status, signal),
         ]);
-        return projectBikeshare(info, status);
+        return { ...projectBikeshare(city, info, status), name: city.bikeshare.name };
       }),
     );
   });
 
-  router.get("/cases311", async (_, res) => {
+  router.get("/cases311", async (req, res) => {
+    const city = cityOf(req);
+    if (!city.cases311) return res.json({ available: false });
     res.json(
-      await cached("cases311", async (signal) =>
-        project311(await getJson(SF_311, signal)),
+      await cached(`cases311:${city.id}`, async (signal) =>
+        project311(city, await getJson(city.cases311, signal)),
       ),
     );
   });
 
-  router.get("/weather", async (_, res) => {
+  router.get("/weather", async (req, res) => {
+    const city = cityOf(req);
+    const { lat, lng } = city.weather;
     res.json(
-      await cached("weather", async (signal) =>
-        projectWeather(await getJson(OPEN_METEO, signal)),
+      await cached(`weather:${city.id}`, async (signal) =>
+        projectWeather(await getJson(OPEN_METEO(lat, lng), signal)),
       ),
     );
   });
 
-  router.get("/airquality", async (_, res) => {
+  router.get("/airquality", async (req, res) => {
+    const city = cityOf(req);
+    const { lat, lng } = city.weather;
     res.json(
-      await cached("airquality", async (signal) =>
-        projectAirQuality(await getJson(AIR_QUALITY, signal)),
+      await cached(`airquality:${city.id}`, async (signal) =>
+        projectAirQuality(await getJson(AIR_QUALITY(lat, lng), signal)),
       ),
     );
   });
 
-  router.get("/alerts", async (_, res) => {
+  router.get("/alerts", async (req, res) => {
+    const city = cityOf(req);
+    if (!city.nws) return res.json({ available: false });
+    const { lat, lng } = city.weather;
     res.json(
-      await cached("alerts", async (signal) =>
+      await cached(`alerts:${city.id}`, async (signal) =>
         projectAlerts(
-          await getJson(NWS_ALERTS, signal, { "User-Agent": NWS_UA }),
+          await getJson(NWS_ALERTS(lat, lng), signal, { "User-Agent": NWS_UA }),
         ),
       ),
     );

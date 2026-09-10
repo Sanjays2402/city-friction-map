@@ -6,9 +6,9 @@
 ![Node.js 22.13+](https://img.shields.io/badge/Node.js-22.13%2B-426b42)
 ![SQLite](https://img.shields.io/badge/storage-SQLite-557768)
 
-Spot long queues, blocked sidewalks, noisy roadwork, empty bike docks, closed restrooms, and poor reception. Share a heads-up, confirm what’s still there, and help the next person find a smoother day.
+Spot long queues, blocked sidewalks, noisy roadwork, empty bike docks, closed restrooms, and poor reception — now in **San Francisco, Seattle, and New York**. Share a heads-up, confirm what’s still there, and help the next person find a smoother day.
 
-Live layers pull in real Bay Wheels bike-share status, SF 311 cases, weather, air quality, and National Weather Service alerts, and every contribution earns XP toward levels, badges, and streaks.
+Live layers pull in real bike-share status, 311 cases, weather, air quality, and National Weather Service alerts for the selected city, and every contribution earns XP toward levels, badges, and streaks.
 
 ![City overview with filters, alert zones, trip check, heatmap, and interactive map](docs/screenshots/desktop.png)
 
@@ -34,10 +34,14 @@ Live layers pull in real Bay Wheels bike-share status, SF 311 cases, weather, ai
 | Earn XP, levels, badges, and streaks      | Take the weekly confirmation challenge  | See level icons on the leaderboard            |
 | Export reports as GeoJSON                 | Import a GeoJSON FeatureCollection      |                                               |
 | Keyboard shortcuts for power users        | Installable PWA with offline shell      |                                               |
+| **New in v1.5.0**                         |                                         |                                               |
+| Switch between San Francisco, Seattle, and New York | City-scoped reports, alerts, and live data | Notification center with unread badge  |
+| Dark mode with system preference detection | Full Spanish translation                | Offline report queue with automatic sync       |
+| Shareable `/r/:id` report links           |                                         |                                               |
 
 Reports persist in SQLite and refresh across browsers every 15 seconds. The responsive interface supports desktop and mobile.
 
-Live enrichment layers (Bay Wheels bike-share, SF 311 cases, Open-Meteo weather and air quality, NWS weather alerts) come from free keyless public APIs through cached server proxies; when an upstream is down, its toggle quietly stands down instead of showing dead data.
+Live enrichment layers (bike-share status, 311 cases, Open-Meteo weather and air quality, NWS weather alerts) come from free keyless public APIs through cached server proxies, scoped to the selected city; when an upstream is down, its toggle quietly stands down instead of showing dead data.
 
 ## Screenshots
 

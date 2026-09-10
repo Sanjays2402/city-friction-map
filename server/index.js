@@ -1,5 +1,5 @@
 import express from "express";
-import { mkdirSync } from "node:fs";
+import { mkdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { createStore } from "./store.js";
 import { createApi } from "./api.js";
@@ -17,6 +17,38 @@ app.disable("x-powered-by");
 app.use("/api/enrich", createEnrichRouter());
 app.use("/api", createApi(store, { adminToken: process.env.ADMIN_TOKEN }));
 if (process.env.NODE_ENV === "production") {
+  // Shareable report links: /r/:id serves the SPA with Open Graph tags so
+  // link previews name the report. Unknown ids fall through to the SPA,
+  // which shows its own "not found" state.
+  const attr = (s) =>
+    String(s ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  app.get("/r/:id", (req, res, next) => {
+    let report = null;
+    try {
+      report = store.get(req.params.id);
+    } catch {
+      return next();
+    }
+    if (report.hidden) return next();
+    let html;
+    try {
+      html = readFileSync(resolve("dist/index.html"), "utf8");
+    } catch {
+      return next();
+    }
+    const meta =
+      `<meta property="og:title" content="${attr(report.title)} · City Friction">` +
+      `<meta property="og:description" content="${attr(report.location)} — ${attr(report.description || "").slice(0, 160)}">` +
+      `<meta property="og:type" content="website">` +
+      `<link rel="canonical" href="/r/${attr(report.id)}">`;
+    res
+      .set("Content-Type", "text/html; charset=utf-8")
+      .send(html.replace("</head>", `${meta}</head>`));
+  });
   app.use(express.static(resolve("dist")));
   app.get("/{*path}", (_, res) => res.sendFile(resolve("dist/index.html")));
 } else {

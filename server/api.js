@@ -2,6 +2,7 @@ import express from "express";
 import { timingSafeEqual } from "node:crypto";
 import { ipKeyGenerator, rateLimit } from "express-rate-limit";
 import { computeProfile } from "./gamify.js";
+import { cityById, publicCities } from "./cities.js";
 
 // An isolated API factory lets tests exercise real HTTP behavior without Vite.
 export function createApi(store, options = {}) {
@@ -71,7 +72,14 @@ export function createApi(store, options = {}) {
     next();
   });
   api.get("/health", (_, res) => res.json({ ok: true }));
-  api.get("/reports", (_, res) => res.json(store.list()));
+  api.get("/cities", (_, res) => res.json(publicCities()));
+  const cityFilter = (req) => {
+    const city = req.query.city;
+    if (city !== undefined && !cityById(city))
+      throw Object.assign(new Error("Unknown city."), { status: 400 });
+    return city ? { city } : {};
+  };
+  api.get("/reports", (req, res) => res.json(store.list(cityFilter(req))));
   api.get("/reports/:id", (req, res) => {
     res.json(store.get(req.params.id));
   });
@@ -115,8 +123,19 @@ export function createApi(store, options = {}) {
   api.delete("/alerts/:id", (req, res) => {
     res.json(store.deleteAlert(req.get("x-visitor-id"), req.params.id));
   });
-  api.get("/contributors", (_, res) => res.json(store.contributors()));
-  api.get("/trends", (_, res) => res.json(store.trends()));
+  api.get("/contributors", (req, res) =>
+    res.json(store.contributors(cityFilter(req))),
+  );
+  api.get("/trends", (req, res) => res.json(store.trends(cityFilter(req))));
+  api.get("/notifications", (req, res) => {
+    res.json(store.listNotifications(req.get("x-visitor-id")));
+  });
+  api.post("/notifications/read", (req, res) => {
+    const ids = req.body?.ids;
+    if (ids !== undefined && !Array.isArray(ids))
+      return res.status(400).json({ error: "ids must be an array." });
+    res.json(store.markNotificationsRead(req.get("x-visitor-id"), ids));
+  });
   api.get("/gamification/me", (req, res) => {
     const visitorId = req.get("x-visitor-id") || "";
     if (!/^[a-zA-Z0-9-]{12,80}$/.test(visitorId))

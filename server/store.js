@@ -14,10 +14,11 @@ import {
 } from "./domain.js";
 import { InputError } from "./errors.js";
 import { levelFor, xpForStats } from "./gamify.js";
+import { DEFAULT_CITY } from "./cities.js";
 export function createStore(path = ":memory:", seed = true) {
   const db = new DatabaseSync(path);
   db.exec(
-    `PRAGMA journal_mode=WAL; CREATE TABLE IF NOT EXISTS reports (id TEXT PRIMARY KEY, payload TEXT NOT NULL); CREATE TABLE IF NOT EXISTS votes (report_id TEXT, visitor TEXT, action TEXT, created_at INTEGER, PRIMARY KEY(report_id,visitor,action)); CREATE TABLE IF NOT EXISTS comments (id TEXT PRIMARY KEY, report_id TEXT NOT NULL, visitor TEXT NOT NULL, body TEXT NOT NULL, created_at INTEGER NOT NULL, parent_id TEXT); CREATE INDEX IF NOT EXISTS idx_comments_report ON comments(report_id); CREATE TABLE IF NOT EXISTS flags (report_id TEXT NOT NULL, visitor TEXT NOT NULL, reason TEXT NOT NULL, created_at INTEGER NOT NULL, PRIMARY KEY(report_id,visitor)); CREATE INDEX IF NOT EXISTS idx_flags_report ON flags(report_id); CREATE TABLE IF NOT EXISTS reactions (comment_id TEXT NOT NULL, visitor TEXT NOT NULL, kind TEXT NOT NULL, PRIMARY KEY(comment_id,visitor)); CREATE TABLE IF NOT EXISTS alerts (id TEXT PRIMARY KEY, visitor TEXT NOT NULL, lat REAL NOT NULL, lng REAL NOT NULL, radius_m INTEGER NOT NULL, label TEXT NOT NULL, created_at INTEGER NOT NULL); CREATE INDEX IF NOT EXISTS idx_alerts_visitor ON alerts(visitor);`,
+    `PRAGMA journal_mode=WAL; CREATE TABLE IF NOT EXISTS reports (id TEXT PRIMARY KEY, payload TEXT NOT NULL); CREATE TABLE IF NOT EXISTS votes (report_id TEXT, visitor TEXT, action TEXT, created_at INTEGER, PRIMARY KEY(report_id,visitor,action)); CREATE TABLE IF NOT EXISTS comments (id TEXT PRIMARY KEY, report_id TEXT NOT NULL, visitor TEXT NOT NULL, body TEXT NOT NULL, created_at INTEGER NOT NULL, parent_id TEXT); CREATE INDEX IF NOT EXISTS idx_comments_report ON comments(report_id); CREATE TABLE IF NOT EXISTS flags (report_id TEXT NOT NULL, visitor TEXT NOT NULL, reason TEXT NOT NULL, created_at INTEGER NOT NULL, PRIMARY KEY(report_id,visitor)); CREATE INDEX IF NOT EXISTS idx_flags_report ON flags(report_id); CREATE TABLE IF NOT EXISTS reactions (comment_id TEXT NOT NULL, visitor TEXT NOT NULL, kind TEXT NOT NULL, PRIMARY KEY(comment_id,visitor)); CREATE TABLE IF NOT EXISTS alerts (id TEXT PRIMARY KEY, visitor TEXT NOT NULL, lat REAL NOT NULL, lng REAL NOT NULL, radius_m INTEGER NOT NULL, label TEXT NOT NULL, created_at INTEGER NOT NULL); CREATE INDEX IF NOT EXISTS idx_alerts_visitor ON alerts(visitor); CREATE TABLE IF NOT EXISTS notifications (id TEXT PRIMARY KEY, visitor TEXT NOT NULL, type TEXT NOT NULL, title TEXT NOT NULL, body TEXT NOT NULL, report_id TEXT, city TEXT, created_at INTEGER NOT NULL, read_at INTEGER); CREATE INDEX IF NOT EXISTS idx_notifications_visitor ON notifications(visitor, created_at);`,
   );
   // Upgrade path: databases created before threaded replies lack parent_id,
   // and older votes lack created_at (used for streaks and weekly progress).
@@ -27,6 +28,13 @@ export function createStore(path = ":memory:", seed = true) {
     .map((c) => c.name);
   if (!commentColumns.includes("parent_id"))
     db.exec("ALTER TABLE comments ADD COLUMN parent_id TEXT");
+  // Upgrade path: databases created before v1.5.0 lack the alerts city column.
+  const alertColumns = db
+    .prepare("PRAGMA table_info(alerts)")
+    .all()
+    .map((c) => c.name);
+  if (!alertColumns.includes("city"))
+    db.exec("ALTER TABLE alerts ADD COLUMN city TEXT");
   const voteColumns = db
     .prepare("PRAGMA table_info(votes)")
     .all()
@@ -76,7 +84,44 @@ export function createStore(path = ":memory:", seed = true) {
     lng: row.lng,
     radiusM: row.radius_m ?? row.radiusM,
     label: row.label,
+    city: row.city || DEFAULT_CITY,
     createdAt: row.created_at ?? row.createdAt,
+  });
+  const allAlerts = () =>
+    db
+      .prepare(
+        "SELECT id, visitor, lat, lng, radius_m, label, city, created_at FROM alerts",
+      )
+      .all()
+      .map((row) => ({ ...toAlert(row), visitor: row.visitor }));
+  // Fan-out for the notification center. Callers pass already-validated
+  // content; delivery state lives in read_at (null = unread).
+  const notify = (
+    visitor,
+    { type, title, body, reportId = null, city = null },
+  ) => {
+    if (!visitor) return;
+    db.prepare("INSERT INTO notifications VALUES (?,?,?,?,?,?,?,?,?)").run(
+      randomUUID(),
+      visitor,
+      type,
+      String(title).slice(0, 120),
+      String(body).slice(0, 300),
+      reportId,
+      city,
+      Date.now(),
+      null,
+    );
+  };
+  const toNotification = (row) => ({
+    id: row.id,
+    type: row.type,
+    title: row.title,
+    body: row.body,
+    reportId: row.report_id,
+    city: row.city,
+    createdAt: row.created_at,
+    read: row.read_at !== null,
   });
   const toComment = (row, counts = {}) => ({
     id: row.id,
@@ -217,6 +262,7 @@ export function createStore(path = ":memory:", seed = true) {
       ]) =>
         save({
           id: randomUUID(),
+          city: "sf",
           category,
           title,
           location,
@@ -234,13 +280,16 @@ export function createStore(path = ":memory:", seed = true) {
     );
   }
   return {
-    list: () => {
+    list: (filter = {}) => {
       const counts = commentCounts();
       const flags = flagCounts();
+      const city = filter.city || null;
       return all()
+        .filter((r) => !city || (r.city || DEFAULT_CITY) === city)
         .sort((a, b) => b.updatedAt - a.updatedAt)
         .map((r) => ({
           ...r,
+          city: r.city || DEFAULT_CITY,
           hidden: !!r.hidden,
           flagCount: flags[r.id] || 0,
           commentCount: counts[r.id] || 0,
@@ -252,6 +301,7 @@ export function createStore(path = ":memory:", seed = true) {
       if (!r) throw new InputError("Report not found.", 404);
       return {
         ...r,
+        city: r.city || DEFAULT_CITY,
         hidden: !!r.hidden,
         flagCount: flagCountFor(id),
         commentCount: commentCountFor(id),
@@ -273,6 +323,7 @@ export function createStore(path = ":memory:", seed = true) {
         creator: visitor,
         ...Object.fromEntries(
           [
+            "city",
             "category",
             "title",
             "location",
@@ -298,6 +349,24 @@ export function createStore(path = ":memory:", seed = true) {
           "confirm",
           Date.now(),
         );
+        // Notify every alert-zone owner whose zone contains the new report.
+        // Zones only fire for their own city.
+        const seen = new Set();
+        for (const zone of allAlerts()) {
+          if (zone.visitor === visitor || seen.has(zone.visitor)) continue;
+          if ((zone.city || DEFAULT_CITY) !== (report.city || DEFAULT_CITY))
+            continue;
+          if (distance(zone, report) <= zone.radiusM) {
+            seen.add(zone.visitor);
+            notify(zone.visitor, {
+              type: "alert",
+              title: `New friction in “${zone.label}”`,
+              body: `${report.title} · ${report.location}`,
+              reportId: report.id,
+              city: report.city,
+            });
+          }
+        }
       });
       return {
         report: { ...report, commentCount: 0, prediction: prediction(report) },
@@ -330,6 +399,14 @@ export function createStore(path = ":memory:", seed = true) {
           if (r.clearVotes >= 2) {
             r.status = "resolved";
             r.resolvedAt = Date.now();
+            if (r.creator && r.creator !== visitor)
+              notify(r.creator, {
+                type: "resolved",
+                title: "Your report was cleared",
+                body: `${r.title} · ${r.location}`,
+                reportId: r.id,
+                city: r.city || DEFAULT_CITY,
+              });
           }
         }
         save(r);
@@ -439,6 +516,14 @@ export function createStore(path = ":memory:", seed = true) {
           row.created_at,
           row.parent_id,
         );
+        if (r.creator && r.creator !== visitor)
+          notify(r.creator, {
+            type: "comment",
+            title: "New note on your report",
+            body: `${text.slice(0, 120)}`,
+            reportId: r.id,
+            city: r.city || DEFAULT_CITY,
+          });
         return toComment(row);
       });
     },
@@ -473,13 +558,16 @@ export function createStore(path = ":memory:", seed = true) {
         ...zone,
         createdAt: Date.now(),
       };
-      db.prepare("INSERT INTO alerts VALUES (?,?,?,?,?,?,?)").run(
+      db.prepare(
+        "INSERT INTO alerts (id, visitor, lat, lng, radius_m, label, city, created_at) VALUES (?,?,?,?,?,?,?,?)",
+      ).run(
         row.id,
         visitor,
         zone.lat,
         zone.lng,
         zone.radiusM,
         zone.label,
+        zone.city || DEFAULT_CITY,
         row.createdAt,
       );
       return toAlert(row);
@@ -487,7 +575,7 @@ export function createStore(path = ":memory:", seed = true) {
     listAlerts(visitor) {
       return db
         .prepare(
-          "SELECT id, lat, lng, radius_m, label, created_at FROM alerts WHERE visitor=? ORDER BY created_at DESC",
+          "SELECT id, lat, lng, radius_m, label, city, created_at FROM alerts WHERE visitor=? ORDER BY created_at DESC",
         )
         .all(visitor)
         .map(toAlert);
@@ -502,8 +590,10 @@ export function createStore(path = ":memory:", seed = true) {
     alertMatches(visitor) {
       const active = all().filter((r) => r.status === "active" && !r.hidden);
       return this.listAlerts(visitor).map((zone) => {
+        const zoneCity = zone.city || DEFAULT_CITY;
         const matches = [];
         for (const r of active) {
+          if ((r.city || DEFAULT_CITY) !== zoneCity) continue;
           const meters = distance(zone, r);
           if (meters <= zone.radiusM)
             matches.push({
@@ -520,7 +610,31 @@ export function createStore(path = ":memory:", seed = true) {
         return { zone, matches };
       });
     },
-    contributors() {
+    listNotifications(visitor) {
+      const rows = db
+        .prepare(
+          "SELECT id, type, title, body, report_id, city, created_at, read_at FROM notifications WHERE visitor=? ORDER BY created_at DESC LIMIT 50",
+        )
+        .all(visitor);
+      const items = rows.map(toNotification);
+      return { items, unread: items.filter((n) => !n.read).length };
+    },
+    markNotificationsRead(visitor, ids) {
+      if (Array.isArray(ids) && ids.length) {
+        const placeholders = ids.map(() => "?").join(",");
+        db.prepare(
+          `UPDATE notifications SET read_at=? WHERE visitor=? AND read_at IS NULL AND id IN (${placeholders})`,
+        ).run(Date.now(), visitor, ...ids);
+      } else {
+        db.prepare(
+          "UPDATE notifications SET read_at=? WHERE visitor=? AND read_at IS NULL",
+        ).run(Date.now(), visitor);
+      }
+      return this.listNotifications(visitor);
+    },
+    contributors: (filter = {}) => {
+      const city = filter.city || null;
+      const inCity = (r) => !city || (r.city || DEFAULT_CITY) === city;
       const stats = {};
       const bump = (visitor) =>
         (stats[visitor] = stats[visitor] || {
@@ -530,32 +644,45 @@ export function createStore(path = ":memory:", seed = true) {
           helpful: 0,
           flags: 0,
         });
-      for (const r of all()) if (r.creator) bump(r.creator).reports++;
+      for (const r of all())
+        if (r.creator && inCity(r)) bump(r.creator).reports++;
+      // Notes, confirmations, helpful votes, and flags attach to reports, so
+      // scope them through a report-id -> city lookup when a city is given.
+      const cityOf = new Map(all().map((r) => [r.id, r.city || DEFAULT_CITY]));
+      const commentCity = (id) =>
+        cityOf.get(
+          db.prepare("SELECT report_id FROM comments WHERE id=?").get(id)
+            ?.report_id,
+        );
       for (const row of db
-        .prepare("SELECT visitor, COUNT(*) AS c FROM comments GROUP BY visitor")
+        .prepare("SELECT id, visitor, report_id FROM comments")
         .all())
-        bump(row.visitor).notes += row.c;
+        if (!city || cityOf.get(row.report_id) === city)
+          bump(row.visitor).notes++;
+      for (const row of db
+        .prepare("SELECT visitor, report_id FROM votes WHERE action='confirm'")
+        .all())
+        if (!city || cityOf.get(row.report_id) === city)
+          bump(row.visitor).confirmations++;
       for (const row of db
         .prepare(
-          "SELECT visitor, COUNT(*) AS c FROM votes WHERE action='confirm' GROUP BY visitor",
+          "SELECT c.visitor AS visitor, c.id AS cid FROM reactions r JOIN comments c ON c.id = r.comment_id",
         )
         .all())
-        bump(row.visitor).confirmations += row.c;
-      for (const row of db
-        .prepare(
-          "SELECT c.visitor AS visitor, COUNT(*) AS c FROM reactions r JOIN comments c ON c.id = r.comment_id GROUP BY c.visitor",
-        )
-        .all())
-        bump(row.visitor).helpful += row.c;
+        if (!city || commentCity(row.cid) === city) bump(row.visitor).helpful++;
       const hiddenIds = new Set(
         all()
-          .filter((r) => r.hidden)
+          .filter((r) => r.hidden && inCity(r))
           .map((r) => r.id),
       );
       for (const row of db
         .prepare("SELECT visitor, report_id FROM flags")
         .all())
-        if (hiddenIds.has(row.report_id)) bump(row.visitor).flags++;
+        if (
+          hiddenIds.has(row.report_id) &&
+          (!city || cityOf.get(row.report_id) === city)
+        )
+          bump(row.visitor).flags++;
       return Object.entries(stats)
         .map(([visitor, s]) => {
           const xp = xpForStats({
@@ -631,7 +758,9 @@ export function createStore(path = ":memory:", seed = true) {
         .filter((r) => r.hidden)
         .map((r) => r.id);
     },
-    trends() {
+    trends(filter = {}) {
+      const city = filter.city || null;
+      const inCity = (r) => !city || (r.city || DEFAULT_CITY) === city;
       const now = Date.now(),
         dayMs = 86400000,
         buckets = [];
@@ -646,6 +775,7 @@ export function createStore(path = ":memory:", seed = true) {
         resolved = 0;
       const resolutionMinutes = [];
       for (const r of all()) {
+        if (!inCity(r)) continue;
         if (r.status === "resolved") {
           resolved++;
           if (r.resolvedAt > r.createdAt)
@@ -658,10 +788,25 @@ export function createStore(path = ":memory:", seed = true) {
               break;
             }
       }
-      const notes = db.prepare("SELECT COUNT(*) AS c FROM comments").get().c;
-      const confirmations = db
-        .prepare("SELECT COUNT(*) AS c FROM votes WHERE action='confirm'")
-        .get().c;
+      let notes, confirmations;
+      if (city) {
+        const cityOf = new Map(
+          all().map((r) => [r.id, r.city || DEFAULT_CITY]),
+        );
+        notes = db
+          .prepare("SELECT report_id FROM comments")
+          .all()
+          .filter((c) => cityOf.get(c.report_id) === city).length;
+        confirmations = db
+          .prepare("SELECT report_id FROM votes WHERE action='confirm'")
+          .all()
+          .filter((v) => cityOf.get(v.report_id) === city).length;
+      } else {
+        notes = db.prepare("SELECT COUNT(*) AS c FROM comments").get().c;
+        confirmations = db
+          .prepare("SELECT COUNT(*) AS c FROM votes WHERE action='confirm'")
+          .get().c;
+      }
       return {
         days: buckets.map((b) => b.counts),
         avgResolutionMinutes: resolutionMinutes.length

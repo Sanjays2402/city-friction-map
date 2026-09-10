@@ -1,4 +1,5 @@
 import { InputError } from "./errors.js";
+import { cityById, DEFAULT_CITY, inCityBounds } from "./cities.js";
 export const categories = {
   queue: { label: "Long queues", icon: "◷", color: "#c17b20", minutes: 35 },
   access: { label: "Access issues", icon: "↗", color: "#b65252", minutes: 240 },
@@ -24,6 +25,9 @@ export function distance(a, b) {
 export function validateReport(body) {
   if (!body || !Object.hasOwn(categories, body.category))
     throw new InputError("Choose a valid category.");
+  if (body.city !== undefined && !cityById(body.city))
+    throw new InputError("Unknown city.");
+  const city = cityById(body.city) || cityById(DEFAULT_CITY);
   for (const [field, max] of [
     ["title", 100],
     ["location", 100],
@@ -39,12 +43,9 @@ export function validateReport(body) {
   if (
     !Number.isFinite(body.lat) ||
     !Number.isFinite(body.lng) ||
-    body.lat < 37.7 ||
-    body.lat > 37.84 ||
-    body.lng < -122.53 ||
-    body.lng > -122.35
+    !inCityBounds(city.id, body.lat, body.lng)
   )
-    throw new InputError("Choose a location within San Francisco.");
+    throw new InputError(`Choose a location within ${city.name}.`);
   if (![1, 2, 3].includes(body.severity))
     throw new InputError("Choose a valid impact level.");
   let photoUrl = "";
@@ -62,6 +63,7 @@ export function validateReport(body) {
   }
   return {
     ...body,
+    city: city.id,
     title: body.title.trim(),
     location: body.location.trim(),
     description: body.description.trim(),
@@ -130,20 +132,30 @@ export function validateAlert(body) {
   const label = typeof body.label === "string" ? body.label.trim() : "";
   if (label.length < 1 || label.length > 60)
     throw new InputError("Name the zone (1–60 characters).");
+  if (body.city !== undefined && !cityById(body.city))
+    throw new InputError("Unknown city.");
+  const city = cityById(body.city) || null;
   const { lat, lng } = body;
-  if (
-    !Number.isFinite(lat) ||
-    !Number.isFinite(lng) ||
-    lat < SF_BOUNDS.lat[0] ||
-    lat > SF_BOUNDS.lat[1] ||
-    lng < SF_BOUNDS.lng[0] ||
-    lng > SF_BOUNDS.lng[1]
-  )
-    throw new InputError("Place the zone inside San Francisco.");
+  const inside = city
+    ? inCityBounds(city.id, lat, lng)
+    : Number.isFinite(lat) &&
+      Number.isFinite(lng) &&
+      lat >= SF_BOUNDS.lat[0] &&
+      lat <= SF_BOUNDS.lat[1] &&
+      lng >= SF_BOUNDS.lng[0] &&
+      lng <= SF_BOUNDS.lng[1];
+  if (!inside)
+    throw new InputError(
+      city
+        ? `Place the zone inside ${city.name}.`
+        : "Place the zone inside San Francisco.",
+    );
   const radiusM = Number(body.radiusM);
   if (!Number.isInteger(radiusM) || radiusM < 100 || radiusM > 5000)
     throw new InputError("Choose a radius between 100 and 5000 meters.");
-  return { label, lat, lng, radiusM };
+  return city
+    ? { label, lat, lng, radiusM, city: city.id }
+    : { label, lat, lng, radiusM };
 }
 export function prediction(report, now = Date.now()) {
   const duration =
