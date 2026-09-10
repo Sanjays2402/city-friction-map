@@ -45,7 +45,7 @@ test("levelFor maps XP to levels with progress", () => {
     name: "Newcomer",
     icon: "🌱",
     min: 0,
-    next: { name: "Regular", min: 50 },
+    next: { name: "Regular", icon: "🧭", min: 50 },
     progress: 0,
   });
   const mid = levelFor(75);

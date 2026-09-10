@@ -30,7 +30,7 @@ export function levelFor(xp) {
     name: current.name,
     icon: current.icon,
     min: current.min,
-    next: next ? { name: next.name, min: next.min } : null,
+    next: next ? { name: next.name, icon: next.icon, min: next.min } : null,
     progress: Math.round(progress * 100) / 100,
   };
 }

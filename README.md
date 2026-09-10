@@ -8,30 +8,32 @@
 
 Spot long queues, blocked sidewalks, noisy roadwork, empty bike docks, closed restrooms, and poor reception. Share a heads-up, confirm what’s still there, and help the next person find a smoother day.
 
+Live layers pull in real Bay Wheels bike-share status, SF 311 cases, weather, air quality, and National Weather Service alerts, and every contribution earns XP toward levels, badges, and streaks.
+
 ![City overview with filters, alert zones, trip check, heatmap, and interactive map](docs/screenshots/desktop.png)
 
 ## Features
 
-| Explore                                   | Contribute                             | Keep track                                    |
-| ----------------------------------------- | -------------------------------------- | --------------------------------------------- |
-| Interactive map with six categories       | Submit a report at a chosen location   | Save reports on your device                   |
-| Search places and report text             | Merge nearby duplicate reports         | Open an issue from a shareable link           |
-| Filter major obstacles or hide demo data  | Confirm an obstacle or vote it cleared | View active, major, stale, and cleared counts |
-| Sort by recency, impact, or confirmations | Two clearance votes resolve an issue   | See explainable clearance ranges              |
-| Follow reports for update notifications   | Leave neighbor notes on any report     | Export the filtered list as CSV               |
-| Filter to followed reports only           | Attach an optional photo URL           | See comment and photo badges on cards         |
-| Flag misleading reports for review        | Smarter duplicate merging by headline  | Community flags hide misleading reports       |
-| React “helpful” on useful neighbor notes  | Reply to neighbor notes (one level)    | Watch areas for new friction with alert zones |
-| See the most active neighbors             |                                        |                                               |
-| Check friction along a planned route      | Toggle a severity heatmap              | See 14-day trends and averages                |
-| Drag trip stops to fine-tune the route    | Time-filter the heatmap (24h / 7d)     | Draw alert zones by dragging on the map       |
-| Toggle live Bay Wheels dock availability  | Toggle live SF 311 cases on the map    | See live SF weather in the header             |
-| Click a station to report empty docks     | Add a 311 case as a report in one click| See live AQI next to the weather              |
-| Filter 311 cases by top case types        | Toggle live NWS weather alerts         | Adjust enrichment layer opacity               |
-| Rich marker popups with photos and notes  |                                        |                                               |
-| Earn XP, levels, badges, and streaks      | Take the weekly confirmation challenge | See level icons on the leaderboard            |
-| Export reports as GeoJSON                 | Import a GeoJSON FeatureCollection     |                                               |
-| Keyboard shortcuts for power users        | Installable PWA with offline shell     |                                               |
+| Explore                                   | Contribute                              | Keep track                                    |
+| ----------------------------------------- | --------------------------------------- | --------------------------------------------- |
+| Interactive map with six categories       | Submit a report at a chosen location    | Save reports on your device                   |
+| Search places and report text             | Merge nearby duplicate reports          | Open an issue from a shareable link           |
+| Filter major obstacles or hide demo data  | Confirm an obstacle or vote it cleared  | View active, major, stale, and cleared counts |
+| Sort by recency, impact, or confirmations | Two clearance votes resolve an issue    | See explainable clearance ranges              |
+| Follow reports for update notifications   | Leave neighbor notes on any report      | Export the filtered list as CSV               |
+| Filter to followed reports only           | Attach an optional photo URL            | See comment and photo badges on cards         |
+| Flag misleading reports for review        | Smarter duplicate merging by headline   | Community flags hide misleading reports       |
+| React “helpful” on useful neighbor notes  | Reply to neighbor notes (one level)     | Watch areas for new friction with alert zones |
+| See the most active neighbors             |                                         |                                               |
+| Check friction along a planned route      | Toggle a severity heatmap               | See 14-day trends and averages                |
+| Drag trip stops to fine-tune the route    | Time-filter the heatmap (24h / 7d)      | Draw alert zones by dragging on the map       |
+| Toggle live Bay Wheels dock availability  | Toggle live SF 311 cases on the map     | See live SF weather in the header             |
+| Click a station to report empty docks     | Add a 311 case as a report in one click | See live AQI next to the weather              |
+| Filter 311 cases by top case types        | Toggle live NWS weather alerts          | Adjust enrichment layer opacity               |
+| Rich marker popups with photos and notes  |                                         |                                               |
+| Earn XP, levels, badges, and streaks      | Take the weekly confirmation challenge  | See level icons on the leaderboard            |
+| Export reports as GeoJSON                 | Import a GeoJSON FeatureCollection      |                                               |
+| Keyboard shortcuts for power users        | Installable PWA with offline shell      |                                               |
 
 Reports persist in SQLite and refresh across browsers every 15 seconds. The responsive interface supports desktop and mobile.
 
@@ -39,7 +41,19 @@ Live enrichment layers (Bay Wheels bike-share, SF 311 cases, Open-Meteo weather 
 
 ## Screenshots
 
+![City overview with filters, live data layers, gamification chip, and interactive map](docs/screenshots/desktop.png)
+
 <table>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/layers.png" alt="Map with live bike-share dock and SF 311 case layers enabled, weather and AQI pill, weather alert pill, and layer opacity control" /></td>
+    <td width="50%"><img src="docs/screenshots/trip.png" alt="Trip check with a two-stop draggable route and friction reports matched along the corridor" /></td>
+  </tr>
+  <tr><td align="center">Live data layers: bike docks, 311 cases, weather alerts</td><td align="center">Trip check with draggable route stops</td></tr>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/gamify.png" alt="City karma profile with XP level, streak, weekly challenge progress, and earned badges" /></td>
+    <td width="50%"><img src="docs/screenshots/trends.png" alt="Friction trends dialog with 14-day stacked category chart and summary stats" /></td>
+  </tr>
+  <tr><td align="center">City karma: XP, levels, badges, streaks</td><td align="center">14-day friction trends</td></tr>
   <tr>
     <td width="70%"><img src="docs/screenshots/report-detail.png" alt="Report details with confidence, community votes, neighbor notes, flagging, save and share controls" /></td>
     <td width="30%"><img src="docs/screenshots/mobile.png" alt="Mobile city overview, filters, map and report list" /></td>
