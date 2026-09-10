@@ -48,3 +48,23 @@ export function dockColor(station) {
 export function caseColor(status) {
   return /open/i.test(status || "") ? "#c26a1b" : "#8a967d";
 }
+
+// NWS alert severity -> outline color for the alert layer.
+export function alertColor(severity) {
+  const s = (severity || "").toLowerCase();
+  if (s.includes("extreme")) return "#a02020";
+  if (s.includes("severe")) return "#c0392b";
+  if (s.includes("moderate")) return "#d4a017";
+  return "#3979a0";
+}
+
+// 311 case type -> the closest friction category for one-click reports.
+export function caseCategory(type) {
+  const t = (type || "").toLowerCase();
+  if (/noise|music|loud|amplified/.test(t)) return "noise";
+  if (/bike|bicycle/.test(t)) return "bikes";
+  if (/restroom|toilet|pit stop/.test(t)) return "restroom";
+  if (/signal|cell|internet|wifi/.test(t)) return "signal";
+  if (/queue|line|wait/.test(t)) return "queue";
+  return "access";
+}

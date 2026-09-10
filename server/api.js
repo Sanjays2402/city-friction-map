@@ -1,6 +1,7 @@
 import express from "express";
 import { timingSafeEqual } from "node:crypto";
 import { ipKeyGenerator, rateLimit } from "express-rate-limit";
+import { computeProfile } from "./gamify.js";
 
 // An isolated API factory lets tests exercise real HTTP behavior without Vite.
 export function createApi(store, options = {}) {
@@ -116,6 +117,12 @@ export function createApi(store, options = {}) {
   });
   api.get("/contributors", (_, res) => res.json(store.contributors()));
   api.get("/trends", (_, res) => res.json(store.trends()));
+  api.get("/gamification/me", (req, res) => {
+    const visitorId = req.get("x-visitor-id") || "";
+    if (!/^[a-zA-Z0-9-]{12,80}$/.test(visitorId))
+      return res.status(400).json({ error: "A valid visitor ID is required." });
+    res.json(computeProfile(store, visitorId));
+  });
   api.use((_, res) =>
     res.status(404).json({ error: "API endpoint not found." }),
   );

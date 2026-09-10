@@ -2,7 +2,13 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import express from "express";
 import { createEnrichRouter } from "../server/enrich.js";
-import { weatherLabel, dockColor, caseColor } from "../src/enrich.js";
+import {
+  weatherLabel,
+  dockColor,
+  caseColor,
+  alertColor,
+  caseCategory,
+} from "../src/enrich.js";
 
 const GBFS_INFO = {
   data: {
@@ -175,6 +181,114 @@ test("failed or malformed upstreams answer { available: false }", async (t) => {
   assert.equal(unknown.status, 404);
 });
 
+test("airquality proxy projects AQI with EPA labels", async (t) => {
+  const AQ = {
+    current: {
+      time: "2026-09-10T04:00",
+      us_aqi: 63,
+      pm2_5: 12.7,
+    },
+  };
+  const base = await fixture(
+    t,
+    mockFetchImpl(() => AQ, []),
+  );
+  const data = await (await fetch(base + "/airquality")).json();
+  assert.deepEqual(data, {
+    available: true,
+    updatedAt: data.updatedAt,
+    aqi: 63,
+    label: "Moderate",
+    pm25: 12.7,
+    time: "2026-09-10T04:00",
+  });
+});
+
+test("alerts proxy projects NWS alerts with small shapes", async (t) => {
+  const NWS = {
+    features: [
+      {
+        id: "alert-1",
+        geometry: null,
+        properties: {
+          id: "urn:oid:1",
+          event: "Heat Advisory",
+          severity: "Moderate",
+          headline: "Hot temperatures expected",
+          description: "x".repeat(500),
+          expires: "2026-09-10T22:00:00-07:00",
+        },
+      },
+      {
+        properties: { event: "" }, // skipped: no event name
+      },
+    ],
+  };
+  const base = await fixture(
+    t,
+    mockFetchImpl(() => NWS, []),
+  );
+  const data = await (await fetch(base + "/alerts")).json();
+  assert.equal(data.available, true);
+  assert.equal(data.alerts.length, 1);
+  assert.equal(data.alerts[0].event, "Heat Advisory");
+  assert.equal(data.alerts[0].severity, "Moderate");
+  assert.equal(data.alerts[0].description.length, 300);
+  assert.equal(data.alerts[0].polygon, null);
+});
+
+test("alerts proxy forwards the NWS User-Agent header", async (t) => {
+  let seenHeaders = null;
+  const fetchImpl = async (url, init) => {
+    seenHeaders = init?.headers;
+    return { ok: true, json: async () => ({ features: [] }) };
+  };
+  const base = await fixture(t, fetchImpl);
+  await (await fetch(base + "/alerts")).json();
+  assert.match(String(seenHeaders?.["User-Agent"] || ""), /CityFrictionMap/);
+});
+
+test("failed airquality/alerts upstreams answer { available: false }", async (t) => {
+  const failing = await fixture(
+    t,
+    mockFetchImpl(() => new Error("boom"), []),
+  );
+  for (const path of ["/airquality", "/alerts"]) {
+    const data = await (await fetch(failing + path)).json();
+    assert.deepEqual(data, { available: false });
+  }
+  const badAqi = await fixture(
+    t,
+    mockFetchImpl(() => ({ current: {} }), []),
+  );
+  assert.deepEqual(await (await fetch(badAqi + "/airquality")).json(), {
+    available: false,
+  });
+});
+
+test("gamification profile endpoint validates the visitor id", async (t) => {
+  const { createApi } = await import("../server/api.js");
+  const { createStore } = await import("../server/store.js");
+  const app = express();
+  app.use("/api", createApi(createStore(":memory:", false)));
+  const server = await new Promise((resolve) => {
+    const listener = app.listen(0, "127.0.0.1", () => resolve(listener));
+  });
+  t.after(() => new Promise((resolve) => server.close(resolve)));
+  const base = `http://127.0.0.1:${server.address().port}/api`;
+  const bad = await fetch(base + "/gamification/me");
+  assert.equal(bad.status, 400);
+  const good = await (
+    await fetch(base + "/gamification/me", {
+      headers: { "X-Visitor-Id": "profile-visitor-01" },
+    })
+  ).json();
+  assert.equal(good.xp, 0);
+  assert.equal(good.level.name, "Newcomer");
+  assert.equal(good.badges.length, 8);
+  assert.equal(good.weeklyChallenge.goal, 5);
+});
+
 test("enrichment responses are not cached by browsers", async (t) => {
   const base = await fixture(
     t,
@@ -202,4 +316,20 @@ test("dockColor reflects open-dock availability", () => {
 test("caseColor highlights open 311 cases", () => {
   assert.equal(caseColor("Open"), "#c26a1b");
   assert.equal(caseColor("Closed"), "#8a967d");
+});
+
+test("alertColor reflects NWS severity", () => {
+  assert.equal(alertColor("Extreme"), "#a02020");
+  assert.equal(alertColor("Severe"), "#c0392b");
+  assert.equal(alertColor("Moderate"), "#d4a017");
+  assert.equal(alertColor("Minor"), "#3979a0");
+  assert.equal(alertColor("Unknown"), "#3979a0");
+});
+
+test("caseCategory maps 311 types to friction categories", () => {
+  assert.equal(caseCategory("Loud Music / Noise"), "noise");
+  assert.equal(caseCategory("Abandoned Bicycle"), "bikes");
+  assert.equal(caseCategory("Blocked Public Toilet"), "restroom");
+  assert.equal(caseCategory("Pothole"), "access");
+  assert.equal(caseCategory(""), "access");
 });

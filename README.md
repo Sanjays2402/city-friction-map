@@ -26,13 +26,16 @@ Spot long queues, blocked sidewalks, noisy roadwork, empty bike docks, closed re
 | Check friction along a planned route      | Toggle a severity heatmap              | See 14-day trends and averages                |
 | Drag trip stops to fine-tune the route    | Time-filter the heatmap (24h / 7d)     | Draw alert zones by dragging on the map       |
 | Toggle live Bay Wheels dock availability  | Toggle live SF 311 cases on the map    | See live SF weather in the header             |
+| Click a station to report empty docks     | Add a 311 case as a report in one click| See live AQI next to the weather              |
+| Filter 311 cases by top case types        | Toggle live NWS weather alerts         | Adjust enrichment layer opacity               |
 | Rich marker popups with photos and notes  |                                        |                                               |
+| Earn XP, levels, badges, and streaks      | Take the weekly confirmation challenge | See level icons on the leaderboard            |
 | Export reports as GeoJSON                 | Import a GeoJSON FeatureCollection     |                                               |
 | Keyboard shortcuts for power users        | Installable PWA with offline shell     |                                               |
 
 Reports persist in SQLite and refresh across browsers every 15 seconds. The responsive interface supports desktop and mobile.
 
-Live enrichment layers (Bay Wheels bike-share, SF 311 cases, Open-Meteo weather) come from free keyless public APIs through cached server proxies; when an upstream is down, its toggle quietly stands down instead of showing dead data.
+Live enrichment layers (Bay Wheels bike-share, SF 311 cases, Open-Meteo weather and air quality, NWS weather alerts) come from free keyless public APIs through cached server proxies; when an upstream is down, its toggle quietly stands down instead of showing dead data.
 
 ## Screenshots
 

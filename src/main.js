@@ -5,7 +5,13 @@ import { categories } from "../server/domain.js";
 import { corridorReports, clampWidth } from "./tripcheck.js";
 import { toGeoJSON, parseImport, validateImportFeature } from "./geojson.js";
 import { isTypingTarget, shortcutFor } from "./shortcuts.js";
-import { weatherLabel, dockColor, caseColor } from "./enrich.js";
+import {
+  weatherLabel,
+  dockColor,
+  caseColor,
+  alertColor,
+  caseCategory,
+} from "./enrich.js";
 
 // leaflet.heat attaches itself to the global Leaflet object, so expose the
 // bundled copy, then preload the plugin. The toggle awaits it before drawing.
@@ -61,8 +67,8 @@ let initialReport = new URL(location.href).searchParams.get("report");
 let lastDetailKey = null,
   commentsFor = null;
 $("#app").innerHTML = `
-<header><a class="brand" href="/" aria-label="City Friction home"><span class="brand-icon">↗</span> city<span>friction</span><sup>SF</sup></a><nav><span class="nav-active">Explore the city</span><button id="about">How it works ↗</button></nav><button class="primary" id="report">＋ Report friction</button></header>
-<main><section class="intro"><div><div class="eyebrow">A LITTLE LOCAL KNOWLEDGE GOES A LONG WAY</div><h1>Less friction.<br class="mobile-break"> More city.</h1><p>The little things between you and a good day. See them coming.</p></div><div class="city"><span class="pulse"></span> San Francisco <small>Community map · Demo enabled</small><span id="weather-pill" class="weather-pill" hidden></span></div></section>
+<header><a class="brand" href="/" aria-label="City Friction home"><span class="brand-icon">↗</span> city<span>friction</span><sup>SF</sup></a><nav><span class="nav-active">Explore the city</span><button id="about">How it works ↗</button></nav><button id="you-chip" class="you-chip" hidden aria-label="Your contributor profile"><span id="you-icon">🌱</span><span id="you-name">Newcomer</span><span class="xp-track"><span id="you-xp" class="xp-fill"></span></span></button><button class="primary" id="report">＋ Report friction</button></header>
+<main><section class="intro"><div><div class="eyebrow">A LITTLE LOCAL KNOWLEDGE GOES A LONG WAY</div><h1>Less friction.<br class="mobile-break"> More city.</h1><p>The little things between you and a good day. See them coming.</p></div><div class="city"><span class="pulse"></span> San Francisco <small>Community map · Demo enabled</small><span id="weather-pill" class="weather-pill" hidden></span><span id="nws-pill" class="nws-pill" hidden></span></div></section>
 <section class="toolbar" aria-label="Map filters"><label class="search"><span>⌕</span><input id="search" placeholder="Search a place or a problem…" aria-label="Search reports"></label><div id="filters" class="filters"><button class="chip active" data-category="all">All friction</button>${Object.entries(
   categories,
 )
@@ -80,18 +86,18 @@ $("#app").innerHTML = `
   .join(
     "",
   )}</select></label><label>Short headline<input name="title" required minlength="3" maxlength="100" placeholder="e.g. Sidewalk blocked by roadwork"></label><label>Place or intersection<input name="location" required minlength="3" maxlength="100" placeholder="e.g. Market & 8th Street"></label><div class="form-row"><label>Latitude<input name="lat" type="number" step="any" min="37.70" max="37.84" required></label><label>Longitude<input name="lng" type="number" step="any" min="-122.53" max="-122.35" required></label></div><label>Impact<select name="severity"><option value="1">Minor · a little inconvenient</option><option value="2" selected>Moderate · plan around it</option><option value="3">Major · significant obstacle</option></select></label><label>Anything useful to know?<textarea name="description" maxlength="500" rows="3" placeholder="What would you tell a friend walking this way?"></textarea></label><label>Photo URL <span class="optional-note">(optional)</span><input name="photoUrl" type="url" maxlength="500" placeholder="https://… a photo of the obstacle"></label><p class="form-note">Similar reports within 90 meters may be merged. Reports are visible to everyone using this server.</p><p id="form-error" role="alert"></p><button class="primary submit" type="submit">Put it on the map ↗</button></form></dialog>
-<dialog id="about-dialog"><button class="close" aria-label="Close explanation">×</button><div class="eyebrow">A SHARED PICTURE OF YOUR CITY</div><h2>Little reports. Real usefulness.</h2><p>Report an obstacle, confirm it’s still there, or tell your neighbors it has cleared. Two independent browser clearance votes resolve an issue.</p><h3>How estimates work</h3><p>Time ranges use category and impact, measured from the latest confirmation. They’re heuristic estimates, not trained forecasts. More confirmations improve the evidence label, but confidence is never a statistical probability.</p><h3>An honest starting point</h3><p>Initial San Francisco reports are fictional and labeled DEMO. New reports are saved in SQLite and shared across connected browsers. Updates refresh every 15 seconds. Anonymous browser IDs prevent casual repeated votes, but are not identity verification.</p><h3>Keyboard shortcuts</h3><p><kbd>/</kbd> search · <kbd>?</kbd> this guide · <kbd>f</kbd> followed filter · <kbd>Esc</kbd> close dialogs and panels</p></dialog><dialog id="flag-dialog"><form id="flag-form"><div class="dialog-head"><div class="eyebrow">KEEP THE MAP HONEST</div><button type="button" class="close" aria-label="Close flag form">×</button></div><h2>Why flag this report?</h2><p>Three flags from different neighbors hide a report pending review. Flagging is anonymous.</p><div class="flag-reasons"><label><input type="radio" name="reason" value="spam" required> Spam or advertising</label><label><input type="radio" name="reason" value="inaccurate"> Inaccurate or outdated</label><label><input type="radio" name="reason" value="inappropriate"> Inappropriate content</label><label><input type="radio" name="reason" value="duplicate"> Duplicate report</label></div><p id="flag-error" role="alert"></p><button class="primary submit" type="submit">Flag this report</button></form></dialog><dialog id="alert-dialog"><form id="alert-form"><div class="dialog-head"><div class="eyebrow">NEVER MISS FRICTION AGAIN</div><button type="button" class="close" aria-label="Close alert form">×</button></div><h2>Watch this area</h2><p>Get a heads-up when new friction appears inside the zone.</p><label>Zone name<input name="label" required minlength="1" maxlength="60" placeholder="e.g. My walk to work"></label><label>Radius<select name="radiusM"><option value="100">100 m</option><option value="250" selected>250 m</option><option value="500">500 m</option><option value="1000">1 km</option><option value="2500">2.5 km</option><option value="5000">5 km</option></select></label><p id="alert-error" role="alert"></p><button class="primary submit" type="submit">Watch this area</button></form></dialog><dialog id="leaders-dialog"><button class="close" aria-label="Close top neighbors">×</button><div class="eyebrow">THANK YOUR NEIGHBORS</div><h2>Top neighbors</h2><div id="leaders-list"><p class="comments-empty">Loading…</p></div></dialog><dialog id="trends-dialog"><button class="close" aria-label="Close trends">×</button><div class="eyebrow">THE CITY, IN NUMBERS</div><h2>Friction trends</h2><p>New reports per day for the last 14 days, by category.</p><canvas id="trends-chart" width="640" height="300" aria-label="Bar chart of new reports per day"></canvas><div id="trends-legend" class="trends-legend"></div><div id="trends-stats" class="trends-stats"></div></dialog><dialog id="import-dialog"><form id="import-form"><div class="dialog-head"><div class="eyebrow">BRING YOUR OWN DATA</div><button type="button" class="close" aria-label="Close import form">×</button></div><h2>Import GeoJSON</h2><p>Choose a GeoJSON FeatureCollection of Point features. Each valid feature becomes a report; similar ones merge into existing reports.</p><label>GeoJSON file<input name="file" type="file" accept=".geojson,.json,application/json" required></label><p id="import-error" role="alert"></p><p id="import-status" role="status"></p><button class="primary submit" type="submit">Import reports</button></form></dialog><div id="toast" role="status"></div>`;
+<dialog id="about-dialog"><button class="close" aria-label="Close explanation">×</button><div class="eyebrow">A SHARED PICTURE OF YOUR CITY</div><h2>Little reports. Real usefulness.</h2><p>Report an obstacle, confirm it’s still there, or tell your neighbors it has cleared. Two independent browser clearance votes resolve an issue.</p><h3>How estimates work</h3><p>Time ranges use category and impact, measured from the latest confirmation. They’re heuristic estimates, not trained forecasts. More confirmations improve the evidence label, but confidence is never a statistical probability.</p><h3>An honest starting point</h3><p>Initial San Francisco reports are fictional and labeled DEMO. New reports are saved in SQLite and shared across connected browsers. Updates refresh every 15 seconds. Anonymous browser IDs prevent casual repeated votes, but are not identity verification.</p><h3>Keyboard shortcuts</h3><p><kbd>/</kbd> search · <kbd>?</kbd> this guide · <kbd>f</kbd> followed filter · <kbd>Esc</kbd> close dialogs and panels</p></dialog><dialog id="flag-dialog"><form id="flag-form"><div class="dialog-head"><div class="eyebrow">KEEP THE MAP HONEST</div><button type="button" class="close" aria-label="Close flag form">×</button></div><h2>Why flag this report?</h2><p>Three flags from different neighbors hide a report pending review. Flagging is anonymous.</p><div class="flag-reasons"><label><input type="radio" name="reason" value="spam" required> Spam or advertising</label><label><input type="radio" name="reason" value="inaccurate"> Inaccurate or outdated</label><label><input type="radio" name="reason" value="inappropriate"> Inappropriate content</label><label><input type="radio" name="reason" value="duplicate"> Duplicate report</label></div><p id="flag-error" role="alert"></p><button class="primary submit" type="submit">Flag this report</button></form></dialog><dialog id="alert-dialog"><form id="alert-form"><div class="dialog-head"><div class="eyebrow">NEVER MISS FRICTION AGAIN</div><button type="button" class="close" aria-label="Close alert form">×</button></div><h2>Watch this area</h2><p>Get a heads-up when new friction appears inside the zone.</p><label>Zone name<input name="label" required minlength="1" maxlength="60" placeholder="e.g. My walk to work"></label><label>Radius<select name="radiusM"><option value="100">100 m</option><option value="250" selected>250 m</option><option value="500">500 m</option><option value="1000">1 km</option><option value="2500">2.5 km</option><option value="5000">5 km</option></select></label><p id="alert-error" role="alert"></p><button class="primary submit" type="submit">Watch this area</button></form></dialog><dialog id="leaders-dialog"><button class="close" aria-label="Close top neighbors">×</button><div class="eyebrow">THANK YOUR NEIGHBORS</div><h2>Top neighbors</h2><div id="leaders-list"><p class="comments-empty">Loading…</p></div></dialog><dialog id="profile-dialog"><button class="close" aria-label="Close profile">×</button><div class="eyebrow">YOUR CITY KARMA</div><h2 id="profile-title">Contributor profile</h2><div id="profile-body"><p class="comments-empty">Loading…</p></div></dialog><dialog id="trends-dialog"><button class="close" aria-label="Close trends">×</button><div class="eyebrow">THE CITY, IN NUMBERS</div><h2>Friction trends</h2><p>New reports per day for the last 14 days, by category.</p><canvas id="trends-chart" width="640" height="300" aria-label="Bar chart of new reports per day"></canvas><div id="trends-legend" class="trends-legend"></div><div id="trends-stats" class="trends-stats"></div></dialog><dialog id="import-dialog"><form id="import-form"><div class="dialog-head"><div class="eyebrow">BRING YOUR OWN DATA</div><button type="button" class="close" aria-label="Close import form">×</button></div><h2>Import GeoJSON</h2><p>Choose a GeoJSON FeatureCollection of Point features. Each valid feature becomes a report; similar ones merge into existing reports.</p><label>GeoJSON file<input name="file" type="file" accept=".geojson,.json,application/json" required></label><p id="import-error" role="alert"></p><p id="import-status" role="status"></p><button class="primary submit" type="submit">Import reports</button></form></dialog><div id="toast" role="status"></div>`;
 $(".toolbar").insertAdjacentHTML(
   "beforebegin",
   '<section id="summary" class="summary" aria-label="City overview"></section>',
 );
 $(".toolbar").insertAdjacentHTML(
   "afterend",
-  `<section class="discovery-controls" aria-label="Report preferences"><div><button id="saved-toggle" class="preference" aria-pressed="false">☆ Saved reports <span id="saved-count">0</span></button><button id="followed-toggle" class="preference" aria-pressed="false">🔔 Followed <span id="followed-count">0</span></button><button id="alerts-toggle" class="preference" aria-pressed="false">⚐ Alert zones</button><button id="draw-toggle" class="preference" aria-pressed="false">◯ Draw zone</button><button id="trip-toggle" class="preference" aria-pressed="false">🛣 Trip check</button><button id="heat-toggle" class="preference" aria-pressed="false">🔥 Heatmap</button><button id="bikes-toggle" class="preference" aria-pressed="false">🚲 Bike docks</button><button id="cases-toggle" class="preference" aria-pressed="false">📋 311 cases</button><button id="leaders" class="preference">🏆 Top neighbors</button><button id="trends" class="preference">📊 Trends</button><label><input id="major-only" type="checkbox"> Major impact only</label><label><input id="hide-demo" type="checkbox"> Hide demo reports</label><button id="export-csv" class="preference">⭳ Export CSV</button><button id="export-geojson" class="preference">⭳ GeoJSON</button><button id="import-geojson" class="preference">⭳ Import</button></div><label class="sort-label">Sort by <select id="sort"><option value="recent">Latest update</option><option value="impact">Highest impact</option><option value="confirmed">Most confirmed</option></select></label></section>`,
+  `<section class="discovery-controls" aria-label="Report preferences"><div><button id="saved-toggle" class="preference" aria-pressed="false">☆ Saved reports <span id="saved-count">0</span></button><button id="followed-toggle" class="preference" aria-pressed="false">🔔 Followed <span id="followed-count">0</span></button><button id="alerts-toggle" class="preference" aria-pressed="false">⚐ Alert zones</button><button id="draw-toggle" class="preference" aria-pressed="false">◯ Draw zone</button><button id="trip-toggle" class="preference" aria-pressed="false">🛣 Trip check</button><button id="heat-toggle" class="preference" aria-pressed="false">🔥 Heatmap</button><button id="bikes-toggle" class="preference" aria-pressed="false">🚲 Bike docks</button><button id="cases-toggle" class="preference" aria-pressed="false">📋 311 cases</button><button id="nws-toggle" class="preference" aria-pressed="false">⚠ Weather alerts</button><button id="leaders" class="preference">🏆 Top neighbors</button><button id="trends" class="preference">📊 Trends</button><label><input id="major-only" type="checkbox"> Major impact only</label><label><input id="hide-demo" type="checkbox"> Hide demo reports</label><button id="export-csv" class="preference">⭳ Export CSV</button><button id="export-geojson" class="preference">⭳ GeoJSON</button><button id="import-geojson" class="preference">⭳ Import</button><label class="opacity-label">Layer opacity <input id="layer-opacity" type="range" min="20" max="100" value="100" aria-label="Enrichment layer opacity"></label></div><label class="sort-label">Sort by <select id="sort"><option value="recent">Latest update</option><option value="impact">Highest impact</option><option value="confirmed">Most confirmed</option></select></label></section>`,
 );
 $(".discovery-controls").insertAdjacentHTML(
   "afterend",
-  `<section id="alerts-panel" class="alerts-panel" hidden aria-label="Your alert zones"></section><section id="trip-panel" class="trip-panel" hidden aria-label="Trip check"></section>`,
+  `<section id="alerts-panel" class="alerts-panel" hidden aria-label="Your alert zones"></section><section id="trip-panel" class="trip-panel" hidden aria-label="Trip check"></section><section id="layer-filters" class="layer-filters" hidden aria-label="Enrichment layer filters"></section>`,
 );
 const map = L.map("map", { zoomControl: false }).setView(
   [37.775, -122.421],
@@ -136,6 +142,9 @@ async function api(path, body, method) {
   );
   const data = await response.json();
   if (!response.ok) throw new Error(data.error || "Something went wrong.");
+  // Every successful write may earn XP; re-fetch the gamification profile and
+  // celebrate a level-up. Fire-and-forget: the profile loader swallows errors.
+  if (verb !== "GET") refreshProfile();
   return data;
 }
 function age(t) {
@@ -558,7 +567,7 @@ $("#leaders").onclick = async () => {
           .slice(0, 10)
           .map(
             (l, i) =>
-              `<li><span class="medal">${medals[i] || `${i + 1}.`}</span><strong>${escape(l.name)}</strong><span class="leader-stats">${l.score} pts · ${l.reports} reports · ${l.notes} notes · ${l.confirmations} confirmations</span></li>`,
+              `<li><span class="medal">${medals[i] || `${i + 1}.`}</span><strong>${escape(l.name)}</strong> <span class="leader-level" title="${escape(l.levelName || "")}">${l.levelIcon || ""}</span><span class="leader-stats">${l.score} pts · ${l.reports} reports · ${l.notes} notes · ${l.confirmations} confirmations</span></li>`,
           )
           .join("")}</ol>`
       : `<p class="comments-empty">No contributions yet. Be the first to put one on the map!</p>`;
@@ -696,31 +705,133 @@ function heatPoints() {
     .filter((r) => !r.hidden && r.updatedAt >= cutoff)
     .map((r) => [r.lat, r.lng, r.severity / 3]);
 }
-// ---- Live data enrichment layers: Bay Wheels docks, SF 311 cases, weather.
-// Each layer is a toolbar toggle over a cached server proxy (/api/enrich/*).
-// When an upstream is down the proxy answers { available: false } and the
-// toggle quietly stands down instead of showing dead UI.
+// ---- Live data enrichment layers: Bay Wheels docks, SF 311 cases, weather,
+// air quality, and NWS weather alerts. Each layer is a toolbar toggle over a
+// cached server proxy (/api/enrich/*). When an upstream is down the proxy
+// answers { available: false } and the toggle quietly stands down instead of
+// showing dead UI.
 const bikeLayer = L.layerGroup().addTo(map);
 const caseLayer = L.layerGroup().addTo(map);
+const nwsLayer = L.layerGroup().addTo(map);
 let bikesOn = false,
-  casesOn = false;
+  casesOn = false,
+  nwsOn = false,
+  caseData = [],
+  caseTypeFilter = null;
 async function refreshWeather() {
   const pill = $("#weather-pill");
   try {
-    const w = await api("/enrich/weather");
+    const [w, aq] = await Promise.all([
+      api("/enrich/weather"),
+      api("/enrich/airquality").catch(() => ({ available: false })),
+    ]);
     if (!w.available) {
       pill.hidden = true;
       return;
     }
     pill.hidden = false;
-    pill.textContent = `SF now: ${Math.round(w.tempC)}°C, ${weatherLabel(w.code)}`;
-    pill.title = `Live San Francisco weather · wind ${Math.round(w.windKph)} km/h`;
+    const aqi = aq && aq.available ? ` · AQI ${aq.aqi} ${aq.label}` : "";
+    pill.textContent = `SF now: ${Math.round(w.tempC)}°C, ${weatherLabel(w.code)}${aqi}`;
+    pill.title =
+      `Live San Francisco weather · wind ${Math.round(w.windKph)} km/h` +
+      (aq && aq.available ? ` · PM2.5 ${aq.pm25} µg/m³` : "");
   } catch {
     pill.hidden = true;
   }
 }
 refreshWeather();
 setInterval(refreshWeather, 10 * 60 * 1000);
+// Banner pill for National Weather Service alerts; doubles as the data source
+// for the toggleable alert layer below.
+async function refreshNwsBanner() {
+  const pill = $("#nws-pill");
+  try {
+    const data = await api("/enrich/alerts");
+    const alerts = data.available ? data.alerts : [];
+    if (!alerts.length) {
+      pill.hidden = true;
+      return null;
+    }
+    pill.hidden = false;
+    pill.textContent = `⚠ ${alerts[0].event}${alerts.length > 1 ? ` +${alerts.length - 1}` : ""}`;
+    pill.title = alerts
+      .map(
+        (a) =>
+          `${a.event} · ${a.severity}${a.expires ? ` · until ${a.expires.slice(0, 16).replace("T", " ")}` : ""}`,
+      )
+      .join("\n");
+    return alerts;
+  } catch {
+    pill.hidden = true;
+    return null;
+  }
+}
+refreshNwsBanner();
+setInterval(refreshNwsBanner, 10 * 60 * 1000);
+$("#nws-toggle").onclick = async () => {
+  nwsOn = !nwsOn;
+  $("#nws-toggle").setAttribute("aria-pressed", String(nwsOn));
+  if (!nwsOn) {
+    nwsLayer.clearLayers();
+    return;
+  }
+  try {
+    const alerts = await refreshNwsBanner();
+    if (!alerts || !alerts.length || !nwsOn) throw new Error("unavailable");
+    nwsLayer.clearLayers();
+    for (const a of alerts) {
+      const color = alertColor(a.severity);
+      const tooltip =
+        `<strong>⚠ ${escape(a.event)}</strong><br>${escape(a.severity)}` +
+        (a.headline ? `<br>${escape(a.headline)}` : "");
+      if (a.polygon) {
+        // NWS polygons arrive as GeoJSON rings ([lng, lat]); Leaflet wants [lat, lng].
+        const rings = a.polygon.map((ring) =>
+          ring.map(([lng, lat]) => [lat, lng]),
+        );
+        L.polygon(rings, {
+          color,
+          weight: 2,
+          dashArray: "6 4",
+          fillColor: color,
+          fillOpacity: 0.12,
+        })
+          .bindTooltip(tooltip)
+          .addTo(nwsLayer);
+      } else {
+        // Zone alerts carry no geometry; render an area indicator over the city.
+        L.circle([37.7749, -122.4194], {
+          radius: 6500,
+          color,
+          weight: 2,
+          dashArray: "6 4",
+          fillColor: color,
+          fillOpacity: 0.06,
+        })
+          .bindTooltip(tooltip + "<br><em>Covers the San Francisco area</em>")
+          .addTo(nwsLayer);
+      }
+    }
+    toast(
+      `${alerts.length} active weather alert${alerts.length === 1 ? "" : "s"} shown.`,
+    );
+  } catch {
+    nwsOn = false;
+    $("#nws-toggle").setAttribute("aria-pressed", "false");
+    toast("Weather alert data is unavailable right now.");
+  }
+};
+function openReportPrefill(prefill) {
+  const form = $("#report-form");
+  form.elements.category.value = prefill.category || "access";
+  form.elements.title.value = prefill.title || "";
+  form.elements.location.value = prefill.location || "";
+  form.elements.lat.value = Number(prefill.lat).toFixed(6);
+  form.elements.lng.value = Number(prefill.lng).toFixed(6);
+  form.elements.description.value = prefill.description || "";
+  $("#form-error").textContent = "";
+  $("#report-dialog").showModal();
+}
 $("#bikes-toggle").onclick = async () => {
   bikesOn = !bikesOn;
   $("#bikes-toggle").setAttribute("aria-pressed", String(bikesOn));
@@ -734,20 +845,37 @@ $("#bikes-toggle").onclick = async () => {
     bikeLayer.clearLayers();
     for (const s of data.stations) {
       const color = dockColor(s);
-      L.circleMarker([s.lat, s.lng], {
+      const marker = L.circleMarker([s.lat, s.lng], {
         radius: 5,
         color,
         weight: 2,
         fillColor: color,
         fillOpacity: 0.65,
-      })
-        .bindTooltip(
-          `<strong>${escape(s.name)}</strong><br>${s.bikes} bikes · ${s.docks} docks open${s.ebikes ? ` · ${s.ebikes} e-bikes` : ""}`,
-        )
-        .addTo(bikeLayer);
+      }).addTo(bikeLayer);
+      marker.bindPopup(
+        `<div class="layer-popup"><strong>${escape(s.name)}</strong><br>${s.bikes} bikes · ${s.docks} docks open${s.ebikes ? ` · ${s.ebikes} e-bikes` : ""}<br><button class="mini-action" type="button">Report empty docks here</button></div>`,
+      );
+      marker.on("popupopen", () => {
+        const btn = marker
+          .getPopup()
+          .getElement()
+          ?.querySelector(".mini-action");
+        if (btn)
+          btn.onclick = () => {
+            marker.closePopup();
+            openReportPrefill({
+              category: "bikes",
+              title: `Empty docks at ${s.name}`.slice(0, 100),
+              location: s.name.slice(0, 100),
+              lat: s.lat,
+              lng: s.lng,
+              description: `Bay Wheels station showing ${s.docks} open dock${s.docks === 1 ? "" : "s"} and ${s.bikes} bike${s.bikes === 1 ? "" : "s"}.`,
+            });
+          };
+      });
     }
     toast(
-      `${data.stations.length} Bay Wheels stations — green has open docks, red is full.`,
+      `${data.stations.length} Bay Wheels stations — green has open docks, red is full. Click one to report.`,
     );
   } catch {
     bikesOn = false;
@@ -755,38 +883,188 @@ $("#bikes-toggle").onclick = async () => {
     toast("Bike-share data is unavailable right now.");
   }
 };
+function drawCases() {
+  caseLayer.clearLayers();
+  const rows = caseTypeFilter
+    ? caseData.filter((c) => c.type === caseTypeFilter)
+    : caseData;
+  for (const c of rows) {
+    const color = caseColor(c.status);
+    const marker = L.circleMarker([c.lat, c.lng], {
+      radius: 4,
+      color,
+      weight: 1.5,
+      fillColor: color,
+      fillOpacity: 0.55,
+    }).addTo(caseLayer);
+    marker.bindPopup(
+      `<div class="layer-popup"><strong>${escape(c.type)}</strong><br>${escape(c.status)}${c.address ? `<br>${escape(c.address)}` : ""}<br><button class="mini-action" type="button">Add as friction report</button></div>`,
+    );
+    marker.on("popupopen", () => {
+      const btn = marker.getPopup().getElement()?.querySelector(".mini-action");
+      if (btn) btn.onclick = () => addCaseAsReport(c, marker);
+    });
+  }
+}
+function renderLayerFilters() {
+  const box = $("#layer-filters");
+  if (!casesOn || !caseData.length) {
+    box.hidden = true;
+    box.innerHTML = "";
+    return;
+  }
+  const counts = {};
+  for (const c of caseData) counts[c.type] = (counts[c.type] || 0) + 1;
+  const top = Object.entries(counts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([t]) => t);
+  box.hidden = false;
+  box.innerHTML =
+    `<span class="layer-filters-label">311 types:</span>` +
+    top
+      .map(
+        (t) =>
+          `<button class="layer-chip${caseTypeFilter === t ? " active" : ""}" data-case-type="${escape(t)}">${escape(t)}</button>`,
+      )
+      .join("") +
+    (caseTypeFilter
+      ? `<button class="layer-chip clear" data-case-type="">Clear filter</button>`
+      : "");
+  box.querySelectorAll("[data-case-type]").forEach((b) => {
+    b.onclick = () => {
+      caseTypeFilter = b.dataset.caseType || null;
+      drawCases();
+      renderLayerFilters();
+    };
+  });
+}
+async function addCaseAsReport(c, marker) {
+  marker.closePopup();
+  const button = marker.getPopup().getElement()?.querySelector(".mini-action");
+  if (button) button.disabled = true;
+  try {
+    const result = await api("/reports", {
+      category: caseCategory(c.type),
+      title: c.type.slice(0, 100),
+      location: (c.address || "San Francisco").slice(0, 100),
+      description:
+        `From an SF 311 ${c.status ? c.status.toLowerCase() + " " : ""}case` +
+        (c.opened ? ` opened ${c.opened.slice(0, 10)}` : "") +
+        ".",
+      lat: c.lat,
+      lng: c.lng,
+      severity: 2,
+    });
+    await refresh();
+    if (result.merged) {
+      toast("Linked to a nearby report — your confirmation was added.");
+    } else {
+      select(result.report.id);
+      toast("311 case added as a friction report. Thanks!");
+    }
+  } catch (error) {
+    toast(error.message);
+  }
+}
 $("#cases-toggle").onclick = async () => {
   casesOn = !casesOn;
   $("#cases-toggle").setAttribute("aria-pressed", String(casesOn));
   if (!casesOn) {
+    caseData = [];
+    caseTypeFilter = null;
     caseLayer.clearLayers();
+    renderLayerFilters();
     return;
   }
   try {
     const data = await api("/enrich/cases311");
     if (!data.available || !casesOn) throw new Error("unavailable");
-    caseLayer.clearLayers();
-    for (const c of data.cases) {
-      const color = caseColor(c.status);
-      L.circleMarker([c.lat, c.lng], {
-        radius: 4,
-        color,
-        weight: 1.5,
-        fillColor: color,
-        fillOpacity: 0.55,
-      })
-        .bindTooltip(
-          `<strong>${escape(c.type)}</strong><br>${escape(c.status)}${c.address ? `<br>${escape(c.address)}` : ""}`,
-        )
-        .addTo(caseLayer);
-    }
-    toast(`${data.cases.length} recent SF 311 cases on the map.`);
+    caseData = data.cases;
+    caseTypeFilter = null;
+    drawCases();
+    renderLayerFilters();
+    toast(
+      `${data.cases.length} recent SF 311 cases on the map — filter by type below, click one to add it as a report.`,
+    );
   } catch {
     casesOn = false;
     $("#cases-toggle").setAttribute("aria-pressed", "false");
     toast("311 case data is unavailable right now.");
   }
 };
+// One opacity slider scales every enrichment layer at once.
+$("#layer-opacity").oninput = (e) => {
+  const f = Number(e.target.value) / 100;
+  for (const layer of [bikeLayer, caseLayer, nwsLayer])
+    layer.eachLayer((m) => {
+      if (m.setStyle)
+        m.setStyle({ opacity: Math.min(1, f), fillOpacity: 0.65 * f });
+    });
+};
+// ---- Gamification: XP, levels, badges, streaks, and a weekly challenge.
+// The profile is pure server-side computation over the visitor's existing
+// contributions; the client just renders it and celebrates level-ups.
+let profile = null,
+  profileLoaded = false;
+async function refreshProfile() {
+  try {
+    const next = await api("/gamification/me");
+    const prevLevel = profile?.level?.name;
+    profile = next;
+    renderYouChip();
+    if (profileLoaded && prevLevel && prevLevel !== next.level.name)
+      toast(`🎉 Level up! You're now ${next.level.icon} ${next.level.name}.`);
+    profileLoaded = true;
+  } catch {
+    // Anonymous or unreachable: the chip simply stays hidden.
+  }
+}
+function renderYouChip() {
+  if (!profile) return;
+  $("#you-chip").hidden = false;
+  $("#you-icon").textContent = profile.level.icon;
+  $("#you-name").textContent = profile.level.name;
+  $("#you-xp").style.width = `${Math.round(profile.level.progress * 100)}%`;
+  $("#you-chip").title =
+    `${profile.xp} XP · ${profile.streakDays}-day streak · click for your profile`;
+}
+$("#you-chip").onclick = () => {
+  renderProfileDialog();
+  $("#profile-dialog").showModal();
+};
+function renderProfileDialog() {
+  const body = $("#profile-body");
+  if (!profile) {
+    body.innerHTML = `<p class="comments-empty">Could not load your profile.</p>`;
+    return;
+  }
+  const p = profile;
+  $("#profile-title").innerHTML =
+    `${p.level.icon} ${p.level.name} <small>${p.xp} XP</small>`;
+  const earned = p.badges.filter((b) => b.earned).length;
+  body.innerHTML =
+    `<div class="profile-stats">` +
+    `<div><strong>🔥 ${p.streakDays}</strong><span>day streak</span></div>` +
+    `<div><strong>${p.counts.reports}</strong><span>reports</span></div>` +
+    `<div><strong>${p.counts.confirms}</strong><span>confirmations</span></div>` +
+    `<div><strong>${p.counts.helpfulReceived}</strong><span>helpful votes</span></div>` +
+    `</div>` +
+    `<div class="weekly"><div class="weekly-head"><strong>Weekly challenge</strong><span>${p.weeklyChallenge.progress}/${p.weeklyChallenge.goal}</span></div>` +
+    `<div class="xp-track big"><span class="xp-fill" style="width:${Math.round((p.weeklyChallenge.progress / p.weeklyChallenge.goal) * 100)}%"></span></div>` +
+    `<p>${escape(p.weeklyChallenge.label)}</p></div>` +
+    `<h3>Badges <small>${earned}/${p.badges.length}</small></h3>` +
+    `<div class="badges">${p.badges
+      .map(
+        (b) =>
+          `<div class="badge${b.earned ? " earned" : ""}"><span class="badge-icon">${b.icon}</span><strong>${escape(b.name)}</strong><small>${escape(b.desc)}</small></div>`,
+      )
+      .join("")}</div>` +
+    (p.level.next
+      ? `<p class="next-level">${Math.max(0, p.level.next.min - p.xp)} XP to ${p.level.next.icon} ${p.level.next.name}</p>`
+      : `<p class="next-level">Max level reached. Legend status. 🌟</p>`);
+}
+refreshProfile();
 // ---- Draw alert zones: press-drag a circle on the map, then name it. The
 // drawn radius is rounded to 50 m, clamped to the server's 100–5000 m range,
 // and offered as a one-off option in the zone dialog. Esc cancels mid-drag.

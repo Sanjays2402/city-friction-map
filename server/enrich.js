@@ -14,6 +14,12 @@ const SF_311 =
   "https://data.sfgov.org/resource/vw6y-z8j6.json?$limit=100&$order=requested_datetime%20DESC";
 const OPEN_METEO =
   "https://api.open-meteo.com/v1/forecast?latitude=37.7749&longitude=-122.4194&current=temperature_2m,weather_code,wind_speed_10m";
+const AIR_QUALITY =
+  "https://air-quality-api.open-meteo.com/v1/air-quality?latitude=37.7749&longitude=-122.4194&current=us_aqi,pm2_5";
+const NWS_ALERTS =
+  "https://api.weather.gov/alerts/active?point=37.7749,-122.4194";
+const NWS_UA =
+  "CityFrictionMap/1.4.0 (community map demo; contact via GitHub Sanjays2402/city-friction-map)";
 
 const inSF = (lat, lng) =>
   Number.isFinite(lat) &&
@@ -84,6 +90,55 @@ function projectWeather(payload) {
   };
 }
 
+// US EPA AQI breakpoints -> short label.
+function aqiLabel(aqi) {
+  if (aqi <= 50) return "Good";
+  if (aqi <= 100) return "Moderate";
+  if (aqi <= 150) return "Unhealthy for sensitive groups";
+  if (aqi <= 200) return "Unhealthy";
+  if (aqi <= 300) return "Very unhealthy";
+  return "Hazardous";
+}
+
+function projectAirQuality(payload) {
+  const current = payload?.current;
+  const aqi = Number(current?.us_aqi);
+  if (!Number.isFinite(aqi)) throw new Error("bad air quality payload");
+  return {
+    available: true,
+    updatedAt: Date.now(),
+    aqi: Math.round(aqi),
+    label: aqiLabel(aqi),
+    pm25: Number(current.pm2_5) || 0,
+    time: current.time || null,
+  };
+}
+
+function projectAlerts(payload) {
+  const features = payload?.features;
+  if (!Array.isArray(features)) throw new Error("bad alerts payload");
+  const alerts = [];
+  for (const f of features) {
+    const p = f?.properties || {};
+    if (!p.event) continue;
+    const coords = f?.geometry?.coordinates;
+    alerts.push({
+      id: p.id || f.id || `${p.event}-${alerts.length}`,
+      event: p.event,
+      severity: p.severity || "Unknown",
+      headline: (p.headline || "").slice(0, 200),
+      description: (p.description || "").slice(0, 300),
+      instruction: (p.instruction || "").slice(0, 300),
+      expires: p.expires || null,
+      // NWS zone alerts often carry no polygon; when coordinates exist they
+      // render on the map, otherwise the layer shows an area indicator.
+      polygon: Array.isArray(coords) ? coords : null,
+    });
+    if (alerts.length >= 5) break;
+  }
+  return { available: true, updatedAt: Date.now(), alerts };
+}
+
 export function createEnrichRouter(options = {}) {
   const fetchImpl = options.fetchImpl || globalThis.fetch;
   const router = express.Router();
@@ -112,8 +167,8 @@ export function createEnrichRouter(options = {}) {
     }
   }
 
-  async function getJson(url, signal) {
-    const res = await fetchImpl(url, { signal });
+  async function getJson(url, signal, headers) {
+    const res = await fetchImpl(url, { signal, headers });
     if (!res.ok) throw new Error(`upstream ${res.status}`);
     return res.json();
   }
@@ -142,6 +197,24 @@ export function createEnrichRouter(options = {}) {
     res.json(
       await cached("weather", async (signal) =>
         projectWeather(await getJson(OPEN_METEO, signal)),
+      ),
+    );
+  });
+
+  router.get("/airquality", async (_, res) => {
+    res.json(
+      await cached("airquality", async (signal) =>
+        projectAirQuality(await getJson(AIR_QUALITY, signal)),
+      ),
+    );
+  });
+
+  router.get("/alerts", async (_, res) => {
+    res.json(
+      await cached("alerts", async (signal) =>
+        projectAlerts(
+          await getJson(NWS_ALERTS, signal, { "User-Agent": NWS_UA }),
+        ),
       ),
     );
   });
