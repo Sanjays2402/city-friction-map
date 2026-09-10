@@ -5,6 +5,7 @@ import { categories } from "../server/domain.js";
 import { corridorReports, clampWidth } from "./tripcheck.js";
 import { toGeoJSON, parseImport, validateImportFeature } from "./geojson.js";
 import { isTypingTarget, shortcutFor } from "./shortcuts.js";
+import { weatherLabel, dockColor, caseColor } from "./enrich.js";
 
 // leaflet.heat attaches itself to the global Leaflet object, so expose the
 // bundled copy, then preload the plugin. The toggle awaits it before drawing.
@@ -61,7 +62,7 @@ let lastDetailKey = null,
   commentsFor = null;
 $("#app").innerHTML = `
 <header><a class="brand" href="/" aria-label="City Friction home"><span class="brand-icon">↗</span> city<span>friction</span><sup>SF</sup></a><nav><span class="nav-active">Explore the city</span><button id="about">How it works ↗</button></nav><button class="primary" id="report">＋ Report friction</button></header>
-<main><section class="intro"><div><div class="eyebrow">A LITTLE LOCAL KNOWLEDGE GOES A LONG WAY</div><h1>Less friction.<br class="mobile-break"> More city.</h1><p>The little things between you and a good day. See them coming.</p></div><div class="city"><span class="pulse"></span> San Francisco <small>Community map · Demo enabled</small></div></section>
+<main><section class="intro"><div><div class="eyebrow">A LITTLE LOCAL KNOWLEDGE GOES A LONG WAY</div><h1>Less friction.<br class="mobile-break"> More city.</h1><p>The little things between you and a good day. See them coming.</p></div><div class="city"><span class="pulse"></span> San Francisco <small>Community map · Demo enabled</small><span id="weather-pill" class="weather-pill" hidden></span></div></section>
 <section class="toolbar" aria-label="Map filters"><label class="search"><span>⌕</span><input id="search" placeholder="Search a place or a problem…" aria-label="Search reports"></label><div id="filters" class="filters"><button class="chip active" data-category="all">All friction</button>${Object.entries(
   categories,
 )
@@ -70,7 +71,7 @@ $("#app").innerHTML = `
       `<button class="chip" data-category="${k}"><span style="color:${c.color}">${c.icon}</span> ${c.label}</button>`,
   )
   .join("")}</div></section>
-<section class="workspace"><aside><div class="list-header"><div><h2>Around the neighborhood</h2><p id="count">Loading reports…</p></div><span class="live">● LIVE</span></div><div class="tabs"><button id="active-tab" class="selected">Happening now</button><button id="resolved-tab">Cleared</button></div><div id="list" aria-live="polite"></div><div class="aside-footer">↗ Small updates. Smoother days.</div></aside><div class="map-wrap"><div id="map" aria-label="Map of San Francisco friction reports"></div><div class="map-note"><span class="pulse"></span> The city, with a little more context.</div><button id="locate" title="Show my location" aria-label="Show my location">⌖</button><div id="detail" hidden></div><div class="map-legend"><span>●</span> Community reported <i></i> Estimates, not guarantees</div></div></section>
+<section class="workspace"><aside><div class="list-header"><div><h2>Around the neighborhood</h2><p id="count">Loading reports…</p></div><span class="live">● LIVE</span></div><div class="tabs"><button id="active-tab" class="selected">Happening now</button><button id="resolved-tab">Cleared</button></div><div id="list" aria-live="polite"></div><div class="aside-footer">↗ Small updates. Smoother days.</div></aside><div class="map-wrap"><div id="map" aria-label="Map of San Francisco friction reports"></div><div class="map-note"><span class="pulse"></span> The city, with a little more context.</div><div id="heat-controls" class="heat-controls" hidden><label>Heat window <select id="heat-window" aria-label="Heatmap time window"><option value="0">All time</option><option value="24">Last 24 hours</option><option value="168">Last 7 days</option></select></label></div><button id="locate" title="Show my location" aria-label="Show my location">⌖</button><div id="detail" hidden></div><div class="map-legend"><span>●</span> Community reported <i></i> Estimates, not guarantees</div></div></section>
 <section class="bottom"><div><span class="leaf">✳</span><div><strong>Your two-second update could save someone twenty minutes.</strong><p>Spotted something? Put it on the map.</p></div></div><button id="report-bottom">Share a heads-up ↗</button></section><footer><span>Built for the everyday in-between.</span><span id="updated">Connecting…</span></footer></main>
 <dialog id="report-dialog"><form id="report-form"><div class="dialog-head"><div class="eyebrow">GOOD NEIGHBORS LEAVE A HEADS-UP</div><button type="button" class="close" aria-label="Close report form">×</button></div><h2>What’s slowing things down?</h2><p>Choose a spot on the map first, or enter its coordinates below.</p><label>Type of friction<select name="category">${Object.entries(
   categories,
@@ -86,7 +87,7 @@ $(".toolbar").insertAdjacentHTML(
 );
 $(".toolbar").insertAdjacentHTML(
   "afterend",
-  `<section class="discovery-controls" aria-label="Report preferences"><div><button id="saved-toggle" class="preference" aria-pressed="false">☆ Saved reports <span id="saved-count">0</span></button><button id="followed-toggle" class="preference" aria-pressed="false">🔔 Followed <span id="followed-count">0</span></button><button id="alerts-toggle" class="preference" aria-pressed="false">⚐ Alert zones</button><button id="trip-toggle" class="preference" aria-pressed="false">🛣 Trip check</button><button id="heat-toggle" class="preference" aria-pressed="false">🔥 Heatmap</button><button id="leaders" class="preference">🏆 Top neighbors</button><button id="trends" class="preference">📊 Trends</button><label><input id="major-only" type="checkbox"> Major impact only</label><label><input id="hide-demo" type="checkbox"> Hide demo reports</label><button id="export-csv" class="preference">⭳ Export CSV</button><button id="export-geojson" class="preference">⭳ GeoJSON</button><button id="import-geojson" class="preference">⭳ Import</button></div><label class="sort-label">Sort by <select id="sort"><option value="recent">Latest update</option><option value="impact">Highest impact</option><option value="confirmed">Most confirmed</option></select></label></section>`,
+  `<section class="discovery-controls" aria-label="Report preferences"><div><button id="saved-toggle" class="preference" aria-pressed="false">☆ Saved reports <span id="saved-count">0</span></button><button id="followed-toggle" class="preference" aria-pressed="false">🔔 Followed <span id="followed-count">0</span></button><button id="alerts-toggle" class="preference" aria-pressed="false">⚐ Alert zones</button><button id="draw-toggle" class="preference" aria-pressed="false">◯ Draw zone</button><button id="trip-toggle" class="preference" aria-pressed="false">🛣 Trip check</button><button id="heat-toggle" class="preference" aria-pressed="false">🔥 Heatmap</button><button id="bikes-toggle" class="preference" aria-pressed="false">🚲 Bike docks</button><button id="cases-toggle" class="preference" aria-pressed="false">📋 311 cases</button><button id="leaders" class="preference">🏆 Top neighbors</button><button id="trends" class="preference">📊 Trends</button><label><input id="major-only" type="checkbox"> Major impact only</label><label><input id="hide-demo" type="checkbox"> Hide demo reports</label><button id="export-csv" class="preference">⭳ Export CSV</button><button id="export-geojson" class="preference">⭳ GeoJSON</button><button id="import-geojson" class="preference">⭳ Import</button></div><label class="sort-label">Sort by <select id="sort"><option value="recent">Latest update</option><option value="impact">Highest impact</option><option value="confirmed">Most confirmed</option></select></label></section>`,
 );
 $(".discovery-controls").insertAdjacentHTML(
   "afterend",
@@ -198,7 +199,7 @@ function render() {
   markers.clearLayers();
   rows.forEach((r) => {
     const c = categories[r.category];
-    L.marker([r.lat, r.lng], {
+    const marker = L.marker([r.lat, r.lng], {
       title: r.title,
       icon: L.divIcon({
         className: "friction-marker",
@@ -208,7 +209,11 @@ function render() {
       }),
     })
       .addTo(markers)
+      .bindPopup(popupHtml(r))
       .on("click", () => select(r.id));
+    // Rich popups open on hover; clicks still open the detail panel.
+    marker.on("mouseover", () => marker.openPopup());
+    marker.on("popupopen", () => loadPopupNote(marker, r));
   });
   if (selected) {
     // Rebuilding the detail panel wipes a half-typed neighbor note, so only
@@ -248,6 +253,37 @@ function closeDetail() {
   $("#detail").hidden = true;
   render();
 }
+// Marker popups show a photo thumbnail, the top neighbor note, and the flag
+// count. The note snippet loads lazily on first open and is cached per
+// report so hovering the map never spams the comments endpoint.
+const popupNoteCache = new Map();
+function popupHtml(r, note) {
+  const c = categories[r.category];
+  const flags =
+    r.flagCount > 0
+      ? ` · ⚑ ${r.flagCount} flag${r.flagCount === 1 ? "" : "s"}`
+      : "";
+  const snippet = note && note.length > 140 ? note.slice(0, 140) + "…" : note;
+  return `<div class="marker-popup"><div class="popup-title">${escape(r.title)}</div><div class="popup-meta">${c.icon} ${c.label} · ♧ ${r.confirmations}${flags}</div>${r.photoUrl ? `<img src="${escape(r.photoUrl)}" alt="Photo attached to this report" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">` : ""}${snippet ? `<p class="popup-note">💬 ${escape(snippet)}</p>` : ""}</div>`;
+}
+async function loadPopupNote(marker, r) {
+  if (popupNoteCache.has(r.id)) {
+    const note = popupNoteCache.get(r.id);
+    if (note) marker.setPopupContent(popupHtml(r, note));
+    return;
+  }
+  popupNoteCache.set(r.id, null);
+  try {
+    const comments = await api(`/reports/${r.id}/comments`);
+    const top = comments.find((cm) => cm && cm.body);
+    if (top) {
+      popupNoteCache.set(r.id, top.body);
+      if (marker.isPopupOpen()) marker.setPopupContent(popupHtml(r, top.body));
+    }
+  } catch {
+    // The static popup content (photo, flags) is still useful on its own.
+  }
+}
 // Keyboard shortcuts: / focuses search, ? opens this guide, f toggles the
 // followed filter, and Escape backs out of dialogs, modes, and the detail.
 document.addEventListener("keydown", (e) => {
@@ -267,6 +303,10 @@ document.addEventListener("keydown", (e) => {
     }
     if (alertMode) {
       $("#alerts-toggle").click();
+      closed = true;
+    }
+    if (drawMode) {
+      cancelDraw();
       closed = true;
     }
     if (closed) e.preventDefault();
@@ -444,7 +484,7 @@ $("#alert-form").onsubmit = async (e) => {
   try {
     await api("/alerts", {
       label: form.elements.label.value,
-      radiusM: Number(form.elements.radiusM.value),
+      radiusM: drawnRadiusM || Number(form.elements.radiusM.value),
       lat: alertAnchor.lat,
       lng: alertAnchor.lng,
     });
@@ -529,7 +569,8 @@ $("#leaders").onclick = async () => {
 };
 const tripLayer = L.layerGroup().addTo(map);
 let tripPath = [],
-  tripWidthM = 250;
+  tripWidthM = 250,
+  heatHours = 0;
 let heatLayer = null;
 function tripClick(latlng) {
   tripPath.push(latlng);
@@ -537,11 +578,23 @@ function tripClick(latlng) {
 }
 function redrawTrip() {
   tripLayer.clearLayers();
-  tripPath.forEach((p, i) =>
-    L.circleMarker([p.lat, p.lng], { radius: 6, color: "#9360af" })
+  tripPath.forEach((p, i) => {
+    const stop = L.marker([p.lat, p.lng], {
+      draggable: true,
+      icon: L.divIcon({
+        className: "trip-stop",
+        html: `<span>${i + 1}</span>`,
+        iconSize: [26, 26],
+        iconAnchor: [13, 13],
+      }),
+    })
       .addTo(tripLayer)
-      .bindTooltip(`Stop ${i + 1}`),
-  );
+      .bindTooltip(`Stop ${i + 1} · drag to move`);
+    stop.on("dragend", () => {
+      tripPath[i] = stop.getLatLng();
+      redrawTrip();
+    });
+  });
   if (tripPath.length >= 2)
     L.polyline(
       tripPath.map((p) => [p.lat, p.lng]),
@@ -559,8 +612,8 @@ function renderTripPanel() {
   const hits = corridorReports(reports, tripPath, tripWidthM);
   const hint =
     tripPath.length < 2
-      ? "Click the map to drop route stops — two or more draw your route."
-      : `${tripPath.length} stops · ${hits.length} friction report${hits.length === 1 ? "" : "s"} within ${tripWidthM} m of your route.`;
+      ? "Click the map to drop route stops — two or more draw your route. Drag stops to fine-tune."
+      : `${tripPath.length} stops · ${hits.length} friction report${hits.length === 1 ? "" : "s"} within ${tripWidthM} m of your route. Drag stops to adjust.`;
   panel.innerHTML =
     `<div class="trip-head"><h2>🛣 Trip check</h2><button id="trip-clear">Clear route</button></div>` +
     `<p>${hint}</p>` +
@@ -620,17 +673,197 @@ $("#heat-toggle").onclick = async () => {
       minOpacity: 0.35,
     }).addTo(map);
     heatLayer.bringToBack();
+    $("#heat-controls").hidden = false;
     toast("Heatmap on — brighter means more severe friction nearby.");
   } else {
     map.removeLayer(heatLayer);
     heatLayer = null;
+    $("#heat-controls").hidden = true;
   }
 };
+$("#heat-window").onchange = (e) => {
+  heatHours = Number(e.target.value);
+  if (heatLayer) heatLayer.setLatLngs(heatPoints());
+  toast(
+    heatHours === 0
+      ? "Heatmap: all reports."
+      : `Heatmap: reports updated in the last ${heatHours === 24 ? "24 hours" : "7 days"}.`,
+  );
+};
 function heatPoints() {
+  const cutoff = heatHours ? Date.now() - heatHours * 3600 * 1000 : 0;
   return visible()
-    .filter((r) => !r.hidden)
+    .filter((r) => !r.hidden && r.updatedAt >= cutoff)
     .map((r) => [r.lat, r.lng, r.severity / 3]);
 }
+// ---- Live data enrichment layers: Bay Wheels docks, SF 311 cases, weather.
+// Each layer is a toolbar toggle over a cached server proxy (/api/enrich/*).
+// When an upstream is down the proxy answers { available: false } and the
+// toggle quietly stands down instead of showing dead UI.
+const bikeLayer = L.layerGroup().addTo(map);
+const caseLayer = L.layerGroup().addTo(map);
+let bikesOn = false,
+  casesOn = false;
+async function refreshWeather() {
+  const pill = $("#weather-pill");
+  try {
+    const w = await api("/enrich/weather");
+    if (!w.available) {
+      pill.hidden = true;
+      return;
+    }
+    pill.hidden = false;
+    pill.textContent = `SF now: ${Math.round(w.tempC)}°C, ${weatherLabel(w.code)}`;
+    pill.title = `Live San Francisco weather · wind ${Math.round(w.windKph)} km/h`;
+  } catch {
+    pill.hidden = true;
+  }
+}
+refreshWeather();
+setInterval(refreshWeather, 10 * 60 * 1000);
+$("#bikes-toggle").onclick = async () => {
+  bikesOn = !bikesOn;
+  $("#bikes-toggle").setAttribute("aria-pressed", String(bikesOn));
+  if (!bikesOn) {
+    bikeLayer.clearLayers();
+    return;
+  }
+  try {
+    const data = await api("/enrich/bikeshare");
+    if (!data.available || !bikesOn) throw new Error("unavailable");
+    bikeLayer.clearLayers();
+    for (const s of data.stations) {
+      const color = dockColor(s);
+      L.circleMarker([s.lat, s.lng], {
+        radius: 5,
+        color,
+        weight: 2,
+        fillColor: color,
+        fillOpacity: 0.65,
+      })
+        .bindTooltip(
+          `<strong>${escape(s.name)}</strong><br>${s.bikes} bikes · ${s.docks} docks open${s.ebikes ? ` · ${s.ebikes} e-bikes` : ""}`,
+        )
+        .addTo(bikeLayer);
+    }
+    toast(
+      `${data.stations.length} Bay Wheels stations — green has open docks, red is full.`,
+    );
+  } catch {
+    bikesOn = false;
+    $("#bikes-toggle").setAttribute("aria-pressed", "false");
+    toast("Bike-share data is unavailable right now.");
+  }
+};
+$("#cases-toggle").onclick = async () => {
+  casesOn = !casesOn;
+  $("#cases-toggle").setAttribute("aria-pressed", String(casesOn));
+  if (!casesOn) {
+    caseLayer.clearLayers();
+    return;
+  }
+  try {
+    const data = await api("/enrich/cases311");
+    if (!data.available || !casesOn) throw new Error("unavailable");
+    caseLayer.clearLayers();
+    for (const c of data.cases) {
+      const color = caseColor(c.status);
+      L.circleMarker([c.lat, c.lng], {
+        radius: 4,
+        color,
+        weight: 1.5,
+        fillColor: color,
+        fillOpacity: 0.55,
+      })
+        .bindTooltip(
+          `<strong>${escape(c.type)}</strong><br>${escape(c.status)}${c.address ? `<br>${escape(c.address)}` : ""}`,
+        )
+        .addTo(caseLayer);
+    }
+    toast(`${data.cases.length} recent SF 311 cases on the map.`);
+  } catch {
+    casesOn = false;
+    $("#cases-toggle").setAttribute("aria-pressed", "false");
+    toast("311 case data is unavailable right now.");
+  }
+};
+// ---- Draw alert zones: press-drag a circle on the map, then name it. The
+// drawn radius is rounded to 50 m, clamped to the server's 100–5000 m range,
+// and offered as a one-off option in the zone dialog. Esc cancels mid-drag.
+let drawMode = false,
+  drawStart = null,
+  drawCircle = null,
+  drawnRadiusM = 0,
+  suppressClick = false;
+function cancelDraw() {
+  drawMode = false;
+  drawStart = null;
+  if (drawCircle) {
+    map.removeLayer(drawCircle);
+    drawCircle = null;
+  }
+  map.dragging.enable();
+  $("#draw-toggle").setAttribute("aria-pressed", "false");
+}
+$("#draw-toggle").onclick = () => {
+  drawMode = !drawMode;
+  if (drawMode && alertMode) $("#alerts-toggle").click();
+  $("#draw-toggle").setAttribute("aria-pressed", String(drawMode));
+  toast(
+    drawMode
+      ? "Draw mode: press and drag on the map to size a zone. Esc cancels."
+      : "Draw mode off.",
+  );
+};
+map.on("mousedown", (e) => {
+  if (!drawMode || drawStart) return;
+  drawStart = e.latlng;
+  map.dragging.disable();
+  drawCircle = L.circle(drawStart, {
+    radius: 0,
+    color: "#3979a0",
+    weight: 2,
+    fillOpacity: 0.1,
+  }).addTo(map);
+});
+map.on("mousemove", (e) => {
+  if (!drawMode || !drawStart || !drawCircle) return;
+  drawCircle.setRadius(drawStart.distanceTo(e.latlng));
+});
+map.on("mouseup", (e) => {
+  if (!drawMode || !drawStart) return;
+  const radiusM = drawStart.distanceTo(e.latlng);
+  const center = drawStart;
+  cancelDraw();
+  suppressClick = true;
+  if (radiusM < 50) {
+    toast("Zone too small — drag a wider circle to watch an area.");
+    return;
+  }
+  openDrawnAlertDialog(center, radiusM);
+});
+function openDrawnAlertDialog(center, radiusM) {
+  alertAnchor = { lat: center.lat, lng: center.lng };
+  drawnRadiusM = Math.max(100, Math.min(5000, Math.round(radiusM / 50) * 50));
+  const select = $("#alert-form").elements.radiusM;
+  let option = select.querySelector("[data-drawn]");
+  if (!option) {
+    option = document.createElement("option");
+    option.dataset.drawn = "1";
+    select.appendChild(option);
+  }
+  option.value = String(drawnRadiusM);
+  option.textContent = `≈${drawnRadiusM >= 1000 ? `${drawnRadiusM / 1000} km` : `${drawnRadiusM} m`} (drawn)`;
+  select.value = String(drawnRadiusM);
+  $("#alert-error").textContent = "";
+  $("#alert-dialog").showModal();
+}
+$("#alert-dialog").addEventListener("close", () => {
+  drawnRadiusM = 0;
+  const option =
+    $("#alert-form").elements.radiusM.querySelector("[data-drawn]");
+  if (option) option.remove();
+});
 function drawTrends(days) {
   const canvas = $("#trends-chart");
   const ctx = canvas.getContext("2d");
@@ -966,6 +1199,11 @@ function openReport() {
 $("#report").onclick = openReport;
 $("#report-bottom").onclick = openReport;
 map.on("click", (e) => {
+  if (suppressClick) {
+    suppressClick = false;
+    return;
+  }
+  if (drawMode) return; // draw mode works through drag events, not clicks
   if (tripMode) {
     tripClick(e.latlng);
     return;

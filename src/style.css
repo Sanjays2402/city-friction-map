@@ -1337,3 +1337,76 @@ dialog kbd {
     padding: 9px 0;
   }
 }
+
+/* v1.3.0 live data & map interactivity */
+.weather-pill {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: #eef4ff;
+  border: 1px solid #d5e3f5;
+  color: #2c5d8a;
+  font-size: 11px;
+  font-weight: 600;
+}
+.heat-controls {
+  position: absolute;
+  z-index: 500;
+  top: 64px;
+  left: 20px;
+  background: #fffffff0;
+  border: 1px solid #dfe5d9;
+  border-radius: 7px;
+  padding: 6px 10px;
+  font-size: 11px;
+  color: #4a554e;
+}
+.heat-controls select {
+  margin-left: 4px;
+  font-size: 11px;
+  border: 1px solid #dfe5d9;
+  border-radius: 6px;
+  padding: 2px 4px;
+  background: #fff;
+}
+.trip-stop span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #9360af;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  border: 2px solid #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  cursor: grab;
+}
+.marker-popup {
+  max-width: 230px;
+}
+.marker-popup .popup-title {
+  font-weight: 700;
+  font-size: 13px;
+  margin-bottom: 2px;
+}
+.marker-popup .popup-meta {
+  font-size: 11px;
+  color: #6b7568;
+  margin-bottom: 6px;
+}
+.marker-popup img {
+  width: 100%;
+  border-radius: 6px;
+  margin-bottom: 6px;
+  display: block;
+}
+.marker-popup .popup-note {
+  font-size: 12px;
+  color: #3d453b;
+  margin: 0;
+  font-style: italic;
+}

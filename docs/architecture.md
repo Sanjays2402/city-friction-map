@@ -7,6 +7,8 @@ The browser loads a Vite bundle and requests reports from Express. Leaflet displ
 | Location           | Responsibility                                                                                 |
 | ------------------ | ---------------------------------------------------------------------------------------------- |
 | `src/main.js`      | Map, report form, URL selection, saved reports, following, comments, and rendering             |
+| `src/enrich.js`    | Pure live-data helpers: WMO weather labels, dock/case marker colors                            |
+| `server/enrich.js` | Cached proxies for Bay Wheels, SF 311, and Open-Meteo (60s TTL, 8s timeout)                    |
 | `src/discovery.js` | Pure filtering, sorting, summary, follow-update detection, CSV export, and saved-state parsing |
 | `src/style.css`    | Responsive interface                                                                           |
 | `server/api.js`    | HTTP validation, status codes, and endpoint routing                                            |
@@ -61,9 +63,13 @@ The "Export CSV" control downloads the currently filtered report list (respectin
 
 ## Discovery & insight
 
-**Trip check.** `src/tripcheck.js` exports the pure `corridorReports(reports, path, widthM)` helper: active, non-hidden reports whose point-to-segment distance (equirectangular projection) falls within the corridor width, sorted by distance. Widths clamp to 50–2000 m. The client’s trip mode turns map clicks into route stops, draws the polyline, and lists corridor hits with distances; results recompute on every refresh.
+**Live enrichment.** `server/enrich.js` proxies three free, keyless public APIs so the browser never talks to third parties directly: Bay Wheels GBFS (station information + status joined by station id, filtered to San Francisco, projected to id/name/coordinates/bikes/docks/e-bikes), the SF 311 cases Socrata dataset (`data.sfgov.org/resource/vw6y-z8j6`, 100 most recent, projected to id/type/status/address/coordinates/opened), and Open-Meteo current conditions (temperature, WMO weather code, wind). Each endpoint keeps a 60-second in-memory cache, aborts upstreams after 8 seconds, and answers `{ available: false }` on any failure. The routes are read-only GETs under `/api/enrich/*`, need no visitor id, and are mounted before the `/api` router so its 404 handler never swallows them. Client toggles render bike stations as circle markers colored by open-dock availability (green/amber/red) and 311 cases as small status-colored markers with tooltips; a weather pill in the header refreshes every 10 minutes and hides itself when the upstream is down. Pure presentation helpers (WMO labels, dock/case colors) live in `src/enrich.js` and are unit-tested.
 
-**Heatmap.** A `leaflet.heat` toggle layers intensity = severity ÷ 3 over the visible reports. The plugin attaches to the bundled Leaflet via a preloaded dynamic import (`window.L` is exposed first). The layer refreshes whenever filters change.
+**Trip check.** `src/tripcheck.js` exports the pure `corridorReports(reports, path, widthM)` helper: active, non-hidden reports whose point-to-segment distance (equirectangular projection) falls within the corridor width, sorted by distance. Widths clamp to 50–2000 m. The client’s trip mode turns map clicks into route stops, draws the polyline, and lists corridor hits with distances; results recompute on every refresh. Stops are draggable markers — `dragend` updates the path and re-matches immediately.
+
+**Heatmap.** A `leaflet.heat` toggle layers intensity = severity ÷ 3 over the visible reports. The plugin attaches to the bundled Leaflet via a preloaded dynamic import (`window.L` is exposed first). The layer refreshes whenever filters change. While the heatmap is on, a time-window selector (all time / 24h / 7d) re-renders the layer from report `updatedAt` timestamps entirely client-side — no new endpoint.
+
+**Drawn alert zones.** A draw mode turns press-drag on the map into a live circle preview; on release the zone dialog opens with the drawn radius (rounded to 50 m, clamped to 100–5000 m) offered as a one-off option, and the label prompt creates the zone through the existing `POST /api/alerts`. `Esc` cancels mid-drag; map dragging is disabled while drawing so the gesture never pans the map.
 
 **Trends.** `GET /api/trends` returns 14 day-buckets of new reports per category, the average resolution time in minutes across resolved reports, and totals (active, resolved, notes, confirmations). The client renders a stacked canvas bar chart with a legend plus stat cards.
 
@@ -111,6 +117,9 @@ The "Export CSV" control downloads the currently filtered report list (respectin
 | GET    | `/api/contributors`         | Top 20 neighbors by weighted activity                 |
 | GET    | `/api/trends`               | 14-day category counts, resolution avg, totals        |
 | GET    | `/api/reports/:id`          | One report, including hidden ones (404 when missing)  |
+| GET    | `/api/enrich/bikeshare`     | Bay Wheels SF stations with live dock counts          |
+| GET    | `/api/enrich/cases311`      | 100 most recent SF 311 cases                          |
+| GET    | `/api/enrich/weather`       | Current SF temperature, conditions, and wind          |
 | POST   | `/api/reports/:id/flag`     | Flag a report; hides at 3 distinct-visitor flags      |
 | POST   | `/api/reports/:id/moderate` | `hide`, `restore`, or `delete` (admin token required) |
 
