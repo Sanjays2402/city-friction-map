@@ -13,6 +13,7 @@ export function filterReports(
       (!filters.hideDemo || !r.demo) &&
       (!filters.savedOnly || saved.has(r.id)) &&
       (!filters.followedOnly || followed.has(r.id)) &&
+      (!r.hidden || filters.includeHidden) &&
       `${r.title} ${r.location} ${r.description}`.toLowerCase().includes(query),
   );
   return rows.sort((a, b) => {
@@ -72,6 +73,7 @@ export function snapshotReports(reports) {
       commentCount: r.commentCount || 0,
       clearVotes: r.clearVotes || 0,
       status: r.status,
+      hidden: !!r.hidden,
     };
   return seen;
 }
@@ -100,9 +102,12 @@ export function detectUpdates(current, followed, seen) {
     const before = seen[r.id];
     if (!before) continue;
     const changes = [];
+    if (r.hidden && !before.hidden) {
+      changes.push("hidden after community flags");
+    }
     if (r.status === "resolved" && before.status !== "resolved") {
       changes.push("cleared by the community");
-    } else if (r.status === "active") {
+    } else if (r.status === "active" && !r.hidden) {
       const fresh = r.confirmations - before.confirmations;
       if (fresh > 0)
         changes.push(`${fresh} new confirmation${fresh === 1 ? "" : "s"}`);

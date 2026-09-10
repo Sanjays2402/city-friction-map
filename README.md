@@ -20,6 +20,12 @@ Spot long queues, blocked sidewalks, noisy roadwork, empty bike docks, closed re
 | Sort by recency, impact, or confirmations | Two clearance votes resolve an issue   | See explainable clearance ranges              |
 | Follow reports for update notifications   | Leave neighbor notes on any report     | Export the filtered list as CSV               |
 | Filter to followed reports only           | Attach an optional photo URL           | See comment and photo badges on cards         |
+| Flag misleading reports for review        | Smarter duplicate merging by headline  | Community flags hide misleading reports       |
+| React “helpful” on useful neighbor notes  | Reply to neighbor notes (one level)    | Watch areas for new friction with alert zones |
+| See the most active neighbors             |                                        |                                               |
+| Check friction along a planned route      | Toggle a severity heatmap              | See 14-day trends and averages                |
+| Export reports as GeoJSON                 | Import a GeoJSON FeatureCollection     |                                               |
+| Keyboard shortcuts for power users        | Installable PWA with offline shell     |                                               |
 
 Reports persist in SQLite and refresh across browsers every 15 seconds. The responsive interface supports desktop and mobile.
 

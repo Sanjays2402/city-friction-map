@@ -2,6 +2,14 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "./style.css";
 import { categories } from "../server/domain.js";
+import { corridorReports, clampWidth } from "./tripcheck.js";
+import { toGeoJSON, parseImport, validateImportFeature } from "./geojson.js";
+import { isTypingTarget, shortcutFor } from "./shortcuts.js";
+
+// leaflet.heat attaches itself to the global Leaflet object, so expose the
+// bundled copy, then preload the plugin. The toggle awaits it before drawing.
+window.L = L;
+const heatReady = import("leaflet.heat");
 import {
   detectUpdates,
   filterReports,
@@ -71,14 +79,18 @@ $("#app").innerHTML = `
   .join(
     "",
   )}</select></label><label>Short headline<input name="title" required minlength="3" maxlength="100" placeholder="e.g. Sidewalk blocked by roadwork"></label><label>Place or intersection<input name="location" required minlength="3" maxlength="100" placeholder="e.g. Market & 8th Street"></label><div class="form-row"><label>Latitude<input name="lat" type="number" step="any" min="37.70" max="37.84" required></label><label>Longitude<input name="lng" type="number" step="any" min="-122.53" max="-122.35" required></label></div><label>Impact<select name="severity"><option value="1">Minor · a little inconvenient</option><option value="2" selected>Moderate · plan around it</option><option value="3">Major · significant obstacle</option></select></label><label>Anything useful to know?<textarea name="description" maxlength="500" rows="3" placeholder="What would you tell a friend walking this way?"></textarea></label><label>Photo URL <span class="optional-note">(optional)</span><input name="photoUrl" type="url" maxlength="500" placeholder="https://… a photo of the obstacle"></label><p class="form-note">Similar reports within 90 meters may be merged. Reports are visible to everyone using this server.</p><p id="form-error" role="alert"></p><button class="primary submit" type="submit">Put it on the map ↗</button></form></dialog>
-<dialog id="about-dialog"><button class="close" aria-label="Close explanation">×</button><div class="eyebrow">A SHARED PICTURE OF YOUR CITY</div><h2>Little reports. Real usefulness.</h2><p>Report an obstacle, confirm it’s still there, or tell your neighbors it has cleared. Two independent browser clearance votes resolve an issue.</p><h3>How estimates work</h3><p>Time ranges use category and impact, measured from the latest confirmation. They’re heuristic estimates, not trained forecasts. More confirmations improve the evidence label, but confidence is never a statistical probability.</p><h3>An honest starting point</h3><p>Initial San Francisco reports are fictional and labeled DEMO. New reports are saved in SQLite and shared across connected browsers. Updates refresh every 15 seconds. Anonymous browser IDs prevent casual repeated votes, but are not identity verification.</p></dialog><div id="toast" role="status"></div>`;
+<dialog id="about-dialog"><button class="close" aria-label="Close explanation">×</button><div class="eyebrow">A SHARED PICTURE OF YOUR CITY</div><h2>Little reports. Real usefulness.</h2><p>Report an obstacle, confirm it’s still there, or tell your neighbors it has cleared. Two independent browser clearance votes resolve an issue.</p><h3>How estimates work</h3><p>Time ranges use category and impact, measured from the latest confirmation. They’re heuristic estimates, not trained forecasts. More confirmations improve the evidence label, but confidence is never a statistical probability.</p><h3>An honest starting point</h3><p>Initial San Francisco reports are fictional and labeled DEMO. New reports are saved in SQLite and shared across connected browsers. Updates refresh every 15 seconds. Anonymous browser IDs prevent casual repeated votes, but are not identity verification.</p><h3>Keyboard shortcuts</h3><p><kbd>/</kbd> search · <kbd>?</kbd> this guide · <kbd>f</kbd> followed filter · <kbd>Esc</kbd> close dialogs and panels</p></dialog><dialog id="flag-dialog"><form id="flag-form"><div class="dialog-head"><div class="eyebrow">KEEP THE MAP HONEST</div><button type="button" class="close" aria-label="Close flag form">×</button></div><h2>Why flag this report?</h2><p>Three flags from different neighbors hide a report pending review. Flagging is anonymous.</p><div class="flag-reasons"><label><input type="radio" name="reason" value="spam" required> Spam or advertising</label><label><input type="radio" name="reason" value="inaccurate"> Inaccurate or outdated</label><label><input type="radio" name="reason" value="inappropriate"> Inappropriate content</label><label><input type="radio" name="reason" value="duplicate"> Duplicate report</label></div><p id="flag-error" role="alert"></p><button class="primary submit" type="submit">Flag this report</button></form></dialog><dialog id="alert-dialog"><form id="alert-form"><div class="dialog-head"><div class="eyebrow">NEVER MISS FRICTION AGAIN</div><button type="button" class="close" aria-label="Close alert form">×</button></div><h2>Watch this area</h2><p>Get a heads-up when new friction appears inside the zone.</p><label>Zone name<input name="label" required minlength="1" maxlength="60" placeholder="e.g. My walk to work"></label><label>Radius<select name="radiusM"><option value="100">100 m</option><option value="250" selected>250 m</option><option value="500">500 m</option><option value="1000">1 km</option><option value="2500">2.5 km</option><option value="5000">5 km</option></select></label><p id="alert-error" role="alert"></p><button class="primary submit" type="submit">Watch this area</button></form></dialog><dialog id="leaders-dialog"><button class="close" aria-label="Close top neighbors">×</button><div class="eyebrow">THANK YOUR NEIGHBORS</div><h2>Top neighbors</h2><div id="leaders-list"><p class="comments-empty">Loading…</p></div></dialog><dialog id="trends-dialog"><button class="close" aria-label="Close trends">×</button><div class="eyebrow">THE CITY, IN NUMBERS</div><h2>Friction trends</h2><p>New reports per day for the last 14 days, by category.</p><canvas id="trends-chart" width="640" height="300" aria-label="Bar chart of new reports per day"></canvas><div id="trends-legend" class="trends-legend"></div><div id="trends-stats" class="trends-stats"></div></dialog><dialog id="import-dialog"><form id="import-form"><div class="dialog-head"><div class="eyebrow">BRING YOUR OWN DATA</div><button type="button" class="close" aria-label="Close import form">×</button></div><h2>Import GeoJSON</h2><p>Choose a GeoJSON FeatureCollection of Point features. Each valid feature becomes a report; similar ones merge into existing reports.</p><label>GeoJSON file<input name="file" type="file" accept=".geojson,.json,application/json" required></label><p id="import-error" role="alert"></p><p id="import-status" role="status"></p><button class="primary submit" type="submit">Import reports</button></form></dialog><div id="toast" role="status"></div>`;
 $(".toolbar").insertAdjacentHTML(
   "beforebegin",
   '<section id="summary" class="summary" aria-label="City overview"></section>',
 );
 $(".toolbar").insertAdjacentHTML(
   "afterend",
-  `<section class="discovery-controls" aria-label="Report preferences"><div><button id="saved-toggle" class="preference" aria-pressed="false">☆ Saved reports <span id="saved-count">0</span></button><button id="followed-toggle" class="preference" aria-pressed="false">🔔 Followed <span id="followed-count">0</span></button><label><input id="major-only" type="checkbox"> Major impact only</label><label><input id="hide-demo" type="checkbox"> Hide demo reports</label><button id="export-csv" class="preference">⭳ Export CSV</button></div><label class="sort-label">Sort by <select id="sort"><option value="recent">Latest update</option><option value="impact">Highest impact</option><option value="confirmed">Most confirmed</option></select></label></section>`,
+  `<section class="discovery-controls" aria-label="Report preferences"><div><button id="saved-toggle" class="preference" aria-pressed="false">☆ Saved reports <span id="saved-count">0</span></button><button id="followed-toggle" class="preference" aria-pressed="false">🔔 Followed <span id="followed-count">0</span></button><button id="alerts-toggle" class="preference" aria-pressed="false">⚐ Alert zones</button><button id="trip-toggle" class="preference" aria-pressed="false">🛣 Trip check</button><button id="heat-toggle" class="preference" aria-pressed="false">🔥 Heatmap</button><button id="leaders" class="preference">🏆 Top neighbors</button><button id="trends" class="preference">📊 Trends</button><label><input id="major-only" type="checkbox"> Major impact only</label><label><input id="hide-demo" type="checkbox"> Hide demo reports</label><button id="export-csv" class="preference">⭳ Export CSV</button><button id="export-geojson" class="preference">⭳ GeoJSON</button><button id="import-geojson" class="preference">⭳ Import</button></div><label class="sort-label">Sort by <select id="sort"><option value="recent">Latest update</option><option value="impact">Highest impact</option><option value="confirmed">Most confirmed</option></select></label></section>`,
+);
+$(".discovery-controls").insertAdjacentHTML(
+  "afterend",
+  `<section id="alerts-panel" class="alerts-panel" hidden aria-label="Your alert zones"></section><section id="trip-panel" class="trip-panel" hidden aria-label="Trip check"></section>`,
 );
 const map = L.map("map", { zoomControl: false }).setView(
   [37.775, -122.421],
@@ -91,6 +103,13 @@ L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
   maxZoom: 19,
 }).addTo(map);
 const markers = L.layerGroup().addTo(map);
+const alertCircles = L.layerGroup().addTo(map);
+let alertMode = false,
+  alertZones = [],
+  alertMatches = [],
+  alertAnchor = null;
+// Declared here so the map click router can branch; trip-check UI lands in batch 3.
+let tripMode = false;
 let chosen = map.getCenter(),
   pin;
 function toast(message) {
@@ -99,19 +118,20 @@ function toast(message) {
   clearTimeout(toast.timer);
   toast.timer = setTimeout(() => $("#toast").classList.remove("show"), 4500);
 }
-async function api(path, body) {
+async function api(path, body, method) {
+  const verb = method || (body === undefined ? "GET" : "POST");
   const response = await fetch(
     "/api" + path,
-    body
-      ? {
-          method: "POST",
+    verb === "GET"
+      ? { headers: { "X-Visitor-Id": visitor } }
+      : {
+          method: verb,
           headers: {
             "Content-Type": "application/json",
             "X-Visitor-Id": visitor,
           },
-          body: JSON.stringify(body),
-        }
-      : undefined,
+          body: body === undefined ? undefined : JSON.stringify(body),
+        },
   );
   const data = await response.json();
   if (!response.ok) throw new Error(data.error || "Something went wrong.");
@@ -143,7 +163,9 @@ function visible() {
   );
 }
 function render() {
-  const stats = summarize(reports.filter((r) => !hideDemo || !r.demo));
+  const stats = summarize(
+    reports.filter((r) => (!hideDemo || !r.demo) && !r.hidden),
+  );
   $("#summary").innerHTML =
     `<div><span class="summary-symbol">◉</span><strong>${stats.active}</strong><span>Active heads-ups</span></div><div><span class="summary-symbol red">↗</span><strong>${stats.major}</strong><span>Major obstacles</span></div><div><span class="summary-symbol amber">◷</span><strong>${stats.stale}</strong><span>Need a fresh update</span></div><div><span class="summary-symbol">✓</span><strong>${stats.resolved}</strong><span>Community cleared</span></div><small>Citywide · ${hideDemo ? "community reports only" : "includes demo data"}</small>`;
   $("#saved-count").textContent = reports.filter((r) => saved.has(r.id)).length;
@@ -193,13 +215,15 @@ function render() {
     // re-render it when the underlying report actually changed.
     const r = reports.find((x) => x.id === selected);
     const key = r
-      ? `${r.updatedAt}:${r.commentCount || 0}:${r.status}:${r.clearVotes}:${r.confirmations}`
+      ? `${r.updatedAt}:${r.commentCount || 0}:${r.status}:${r.clearVotes}:${r.confirmations}:${r.hidden ? 1 : 0}:${r.flagCount || 0}`
       : "gone";
     if (key !== lastDetailKey) {
       lastDetailKey = key;
       renderDetail();
     }
   }
+  if (heatLayer) heatLayer.setLatLngs(heatPoints());
+  if (tripMode) renderTripPanel();
   $("#updated").textContent = lastUpdated
     ? `Updated ${age(lastUpdated)} · refreshes every 15s`
     : "Connecting…";
@@ -215,8 +239,59 @@ function select(id) {
   map.flyTo([r.lat, r.lng], 15, { duration: 0.5 });
   render();
 }
+function closeDetail() {
+  selected = null;
+  lastDetailKey = null;
+  const url = new URL(location.href);
+  url.searchParams.delete("report");
+  history.replaceState(null, "", url);
+  $("#detail").hidden = true;
+  render();
+}
+// Keyboard shortcuts: / focuses search, ? opens this guide, f toggles the
+// followed filter, and Escape backs out of dialogs, modes, and the detail.
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") {
+    let closed = false;
+    for (const d of document.querySelectorAll("dialog[open]")) {
+      d.close();
+      closed = true;
+    }
+    if (selected) {
+      closeDetail();
+      closed = true;
+    }
+    if (tripMode) {
+      $("#trip-toggle").click();
+      closed = true;
+    }
+    if (alertMode) {
+      $("#alerts-toggle").click();
+      closed = true;
+    }
+    if (closed) e.preventDefault();
+    return;
+  }
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  if (isTypingTarget(document.activeElement)) return;
+  const action = shortcutFor(e.key);
+  if (action === "focus-search") {
+    e.preventDefault();
+    $("#search").focus();
+  } else if (action === "open-about") {
+    $("#about-dialog").showModal();
+  } else if (action === "toggle-followed") {
+    $("#followed-toggle").click();
+  }
+});
+function helpfulLabel(count) {
+  return `👍 Helpful${count ? ` (${count})` : ""}`;
+}
 function commentHtml(c) {
-  return `<div class="comment"><div class="comment-meta"><strong>${escape(c.author)}</strong><span>${age(c.createdAt)}</span></div><p>${escape(c.body)}</p></div>`;
+  return `<div class="comment" data-comment="${c.id}"><div class="comment-meta"><strong>${escape(c.author)}</strong><span>${age(c.createdAt)}</span></div><p>${escape(c.body)}</p><div class="comment-actions"><button class="helpful" data-react="${c.id}" aria-pressed="false">${helpfulLabel(c.helpfulCount)}</button><button data-reply="${c.id}">↩ Reply</button></div>${c.replies && c.replies.length ? `<div class="replies">${c.replies.map(replyHtml).join("")}</div>` : ""}</div>`;
+}
+function replyHtml(c) {
+  return `<div class="comment reply" data-comment="${c.id}"><div class="comment-meta"><strong>${escape(c.author)}</strong><span>${age(c.createdAt)}</span></div><p>${escape(c.body)}</p><div class="comment-actions"><button class="helpful" data-react="${c.id}" aria-pressed="false">${helpfulLabel(c.helpfulCount)}</button></div></div>`;
 }
 async function loadComments(id) {
   commentsFor = id;
@@ -241,10 +316,10 @@ function renderDetail() {
   const c = categories[r.category];
   $("#detail").hidden = false;
   $("#detail").innerHTML =
-    `<button class="close" id="close-detail" aria-label="Close report details">×</button><div class="eyebrow" style="color:${c.color}">${c.label}${r.demo ? " · FICTIONAL DEMO" : ""}</div><h2>${escape(r.title)}</h2><p class="place">${escape(r.location)}</p>${r.photoUrl ? `<a class="report-photo" href="${escape(r.photoUrl)}" target="_blank" rel="noopener noreferrer"><img src="${escape(r.photoUrl)}" alt="Photo attached to this report" loading="lazy" referrerpolicy="no-referrer" onerror="this.closest('.report-photo').remove()"></a>` : ""}<p>${escape(r.description)}</p><div class="prediction"><span>Estimated time to clear<strong>${r.status === "resolved" ? "Cleared" : escape(r.prediction.label)}</strong></span><span class="confidence">${r.prediction.confidence} confidence</span></div><p class="detail-note">Category-based estimate · ${r.confirmations} confirmations · ${r.clearVotes}/2 clearance votes</p>${r.status === "active" ? '<div class="detail-actions"><button class="primary" data-vote="confirm">Still here +1</button><button data-vote="clear">✓ Looks clear</button></div>' : "<p>✓ The community marked this cleared.</p>"}`;
+    `<button class="close" id="close-detail" aria-label="Close report details">×</button><div class="eyebrow" style="color:${c.color}">${c.label}${r.demo ? " · FICTIONAL DEMO" : ""}</div><h2>${escape(r.title)}</h2><p class="place">${escape(r.location)}</p>${r.photoUrl ? `<a class="report-photo" href="${escape(r.photoUrl)}" target="_blank" rel="noopener noreferrer"><img src="${escape(r.photoUrl)}" alt="Photo attached to this report" loading="lazy" referrerpolicy="no-referrer" onerror="this.closest('.report-photo').remove()"></a>` : ""}<p>${escape(r.description)}</p>${r.hidden ? '<p class="hidden-notice">⚑ Hidden after community flags. Under review.</p>' : ""}<div class="prediction"><span>Estimated time to clear<strong>${r.status === "resolved" ? "Cleared" : escape(r.prediction.label)}</strong></span><span class="confidence">${r.prediction.confidence} confidence</span></div><p class="detail-note">Category-based estimate · ${r.confirmations} confirmations · ${r.clearVotes}/2 clearance votes</p>${r.hidden ? "" : r.status === "active" ? '<div class="detail-actions"><button class="primary" data-vote="confirm">Still here +1</button><button data-vote="clear">✓ Looks clear</button></div>' : "<p>✓ The community marked this cleared.</p>"}`;
   $("#detail").insertAdjacentHTML(
     "beforeend",
-    `<div class="report-tools"><button id="save-report" aria-pressed="${saved.has(r.id)}">${saved.has(r.id) ? "★ Saved" : "☆ Save report"}</button><button id="follow-report" aria-pressed="${followed.has(r.id)}">${followed.has(r.id) ? "🔔 Following" : "🔔 Follow updates"}</button><button id="share-report">Copy report link ↗</button></div><div class="impact-line">${["", "Minor inconvenience", "Moderate impact", "Major obstacle"][r.severity]} · First reported ${age(r.createdAt)}</div><div class="comments"><h3>Neighbor notes</h3><div id="comment-list"><p class="comments-empty">Loading notes…</p></div><form id="comment-form"><input name="note" maxlength="300" placeholder="Add a useful note for neighbors…" aria-label="Add a neighbor note" autocomplete="off"><button type="submit">Post</button></form><p id="comment-error" role="alert"></p></div>`,
+    `<div class="report-tools"><button id="save-report" aria-pressed="${saved.has(r.id)}">${saved.has(r.id) ? "★ Saved" : "☆ Save report"}</button><button id="follow-report" aria-pressed="${followed.has(r.id)}">${followed.has(r.id) ? "🔔 Following" : "🔔 Follow updates"}</button><button id="flag-report">⚑ Flag</button><button id="share-report">Copy report link ↗</button></div><div class="impact-line">${["", "Minor inconvenience", "Moderate impact", "Major obstacle"][r.severity]} · First reported ${age(r.createdAt)}</div><div class="comments"><h3>Neighbor notes</h3><div id="comment-list"><p class="comments-empty">Loading notes…</p></div><form id="comment-form"><input name="note" maxlength="300" placeholder="Add a useful note for neighbors…" aria-label="Add a neighbor note" autocomplete="off"><button type="submit">Post</button></form><p id="comment-error" role="alert"></p></div>`,
   );
   loadComments(r.id);
 }
@@ -267,6 +342,7 @@ async function refresh() {
     }
     seen = snapshotReports(next);
     writeSnapshot(localStorage, seen);
+    await refreshAlerts();
     if (initialReport) {
       const target = reports.find((r) => r.id === initialReport);
       initialReport = null;
@@ -350,6 +426,357 @@ $("#export-csv").onclick = () => {
     `Exported ${rows.length} report${rows.length === 1 ? "" : "s"} to CSV.`,
   );
 };
+$("#alerts-toggle").onclick = () => {
+  alertMode = !alertMode;
+  $("#alerts-toggle").setAttribute("aria-pressed", String(alertMode));
+  toast(
+    alertMode
+      ? "Alert mode: click the map to watch an area."
+      : "Alert mode off. Map clicks select a report location again.",
+  );
+};
+$("#alert-form").onsubmit = async (e) => {
+  e.preventDefault();
+  const form = e.target;
+  const button = form.querySelector(".submit");
+  button.disabled = true;
+  $("#alert-error").textContent = "";
+  try {
+    await api("/alerts", {
+      label: form.elements.label.value,
+      radiusM: Number(form.elements.radiusM.value),
+      lat: alertAnchor.lat,
+      lng: alertAnchor.lng,
+    });
+    $("#alert-dialog").close();
+    form.reset();
+    toast("Zone saved. We'll watch it for new friction.");
+    await refreshAlerts();
+  } catch (error) {
+    $("#alert-error").textContent = error.message;
+  } finally {
+    button.disabled = false;
+  }
+};
+async function refreshAlerts() {
+  try {
+    alertZones = await api("/alerts");
+    alertMatches = alertZones.length ? await api("/alerts/matches") : [];
+  } catch {
+    alertZones = [];
+    alertMatches = [];
+  }
+  alertCircles.clearLayers();
+  for (const zone of alertZones)
+    L.circle([zone.lat, zone.lng], {
+      radius: zone.radiusM,
+      color: "#3979a0",
+      weight: 1.5,
+      fillOpacity: 0.07,
+    })
+      .addTo(alertCircles)
+      .bindTooltip(escape(zone.label));
+  renderAlertPanel();
+}
+function renderAlertPanel() {
+  const panel = $("#alerts-panel");
+  if (!alertZones.length) {
+    panel.hidden = true;
+    return;
+  }
+  panel.hidden = false;
+  panel.innerHTML =
+    `<h2>⚐ Your alert zones</h2>` +
+    alertMatches
+      .map(
+        ({ zone, matches }) =>
+          `<div class="alert-zone"><div><strong>${escape(zone.label)}</strong><span>${zone.radiusM >= 1000 ? `${zone.radiusM / 1000} km` : `${zone.radiusM} m`} radius</span></div><span class="alert-count">${matches.length} active nearby</span><button data-delete-zone="${zone.id}" aria-label="Delete alert zone ${escape(zone.label)}">×</button></div>`,
+      )
+      .join("");
+}
+$("#alerts-panel").addEventListener("click", async (e) => {
+  const button = e.target.closest("[data-delete-zone]");
+  if (!button) return;
+  button.disabled = true;
+  try {
+    await api(`/alerts/${button.dataset.deleteZone}`, undefined, "DELETE");
+    toast("Alert zone removed.");
+    await refreshAlerts();
+  } catch (error) {
+    toast(error.message);
+    button.disabled = false;
+  }
+});
+$("#leaders").onclick = async () => {
+  $("#leaders-list").innerHTML = `<p class="comments-empty">Loading…</p>`;
+  $("#leaders-dialog").showModal();
+  try {
+    const leaders = await api("/contributors");
+    const medals = ["🥇", "🥈", "🥉"];
+    $("#leaders-list").innerHTML = leaders.length
+      ? `<ol>${leaders
+          .slice(0, 10)
+          .map(
+            (l, i) =>
+              `<li><span class="medal">${medals[i] || `${i + 1}.`}</span><strong>${escape(l.name)}</strong><span class="leader-stats">${l.score} pts · ${l.reports} reports · ${l.notes} notes · ${l.confirmations} confirmations</span></li>`,
+          )
+          .join("")}</ol>`
+      : `<p class="comments-empty">No contributions yet. Be the first to put one on the map!</p>`;
+  } catch {
+    $("#leaders-list").innerHTML =
+      `<p class="comments-empty">Could not load the leaderboard.</p>`;
+  }
+};
+const tripLayer = L.layerGroup().addTo(map);
+let tripPath = [],
+  tripWidthM = 250;
+let heatLayer = null;
+function tripClick(latlng) {
+  tripPath.push(latlng);
+  redrawTrip();
+}
+function redrawTrip() {
+  tripLayer.clearLayers();
+  tripPath.forEach((p, i) =>
+    L.circleMarker([p.lat, p.lng], { radius: 6, color: "#9360af" })
+      .addTo(tripLayer)
+      .bindTooltip(`Stop ${i + 1}`),
+  );
+  if (tripPath.length >= 2)
+    L.polyline(
+      tripPath.map((p) => [p.lat, p.lng]),
+      { color: "#9360af", weight: 4, opacity: 0.8 },
+    ).addTo(tripLayer);
+  renderTripPanel();
+}
+function renderTripPanel() {
+  const panel = $("#trip-panel");
+  if (!tripMode) {
+    panel.hidden = true;
+    return;
+  }
+  panel.hidden = false;
+  const hits = corridorReports(reports, tripPath, tripWidthM);
+  const hint =
+    tripPath.length < 2
+      ? "Click the map to drop route stops — two or more draw your route."
+      : `${tripPath.length} stops · ${hits.length} friction report${hits.length === 1 ? "" : "s"} within ${tripWidthM} m of your route.`;
+  panel.innerHTML =
+    `<div class="trip-head"><h2>🛣 Trip check</h2><button id="trip-clear">Clear route</button></div>` +
+    `<p>${hint}</p>` +
+    `<label class="trip-width">Corridor width <input id="trip-width" type="range" min="50" max="2000" step="50" value="${tripWidthM}" aria-label="Corridor width in meters"> <strong>${tripWidthM} m</strong></label>` +
+    (hits.length
+      ? `<ul class="trip-hits">${hits
+          .map(
+            (r) =>
+              `<li><button data-trip-report="${r.id}"><span class="trip-dist">${r.corridorM} m</span><span><strong>${escape(r.title)}</strong><small>${escape(r.location)}</small></span></button></li>`,
+          )
+          .join("")}</ul>`
+      : tripPath.length >= 2
+        ? `<p class="comments-empty">Clear corridor — nothing reported along this route.</p>`
+        : "");
+  $("#trip-width").oninput = (e) => {
+    tripWidthM = clampWidth(e.target.value);
+    renderTripPanel();
+  };
+  $("#trip-clear").onclick = () => {
+    tripPath = [];
+    redrawTrip();
+  };
+  panel
+    .querySelectorAll("[data-trip-report]")
+    .forEach((b) =>
+      b.addEventListener("click", () => select(b.dataset.tripReport)),
+    );
+}
+$("#trip-toggle").onclick = () => {
+  tripMode = !tripMode;
+  $("#trip-toggle").setAttribute("aria-pressed", String(tripMode));
+  if (!tripMode) {
+    tripPath = [];
+    tripLayer.clearLayers();
+  }
+  renderTripPanel();
+  toast(
+    tripMode
+      ? "Trip check: click the map to drop route stops."
+      : "Trip check off.",
+  );
+};
+$("#heat-toggle").onclick = async () => {
+  const on = !heatLayer;
+  $("#heat-toggle").setAttribute("aria-pressed", String(on));
+  if (on) {
+    try {
+      await heatReady;
+    } catch {
+      $("#heat-toggle").setAttribute("aria-pressed", "false");
+      return toast("The heatmap could not load. Please try again.");
+    }
+    heatLayer = L.heatLayer(heatPoints(), {
+      radius: 30,
+      blur: 22,
+      maxZoom: 16,
+      minOpacity: 0.35,
+    }).addTo(map);
+    heatLayer.bringToBack();
+    toast("Heatmap on — brighter means more severe friction nearby.");
+  } else {
+    map.removeLayer(heatLayer);
+    heatLayer = null;
+  }
+};
+function heatPoints() {
+  return visible()
+    .filter((r) => !r.hidden)
+    .map((r) => [r.lat, r.lng, r.severity / 3]);
+}
+function drawTrends(days) {
+  const canvas = $("#trends-chart");
+  const ctx = canvas.getContext("2d");
+  const names = Object.keys(categories);
+  const W = canvas.width,
+    H = canvas.height,
+    padL = 34,
+    padB = 26,
+    padT = 12;
+  const totals = days.map((d) => names.reduce((a, n) => a + (d[n] || 0), 0));
+  const max = Math.max(1, ...totals);
+  ctx.clearRect(0, 0, W, H);
+  ctx.font = "10px system-ui";
+  ctx.fillStyle = "#8a967d";
+  for (let g = 0; g <= 4; g++) {
+    const v = Math.round((max * g) / 4);
+    const y = padT + (H - padB - padT) * (1 - g / 4);
+    ctx.fillText(String(v), 6, y + 3);
+    ctx.strokeStyle = "#eef2e8";
+    ctx.beginPath();
+    ctx.moveTo(padL, y);
+    ctx.lineTo(W - 6, y);
+    ctx.stroke();
+  }
+  const slot = (W - padL - 10) / days.length;
+  const barW = Math.max(4, slot * 0.62);
+  days.forEach((d, i) => {
+    let y = H - padB;
+    const x = padL + i * slot + (slot - barW) / 2;
+    for (const n of names) {
+      const v = d[n] || 0;
+      if (!v) continue;
+      const h = ((H - padB - padT) * v) / max;
+      y -= h;
+      ctx.fillStyle = categories[n].color;
+      ctx.fillRect(x, y, barW, h);
+    }
+    if (i % 2 === 0) {
+      ctx.fillStyle = "#8a967d";
+      ctx.fillText(d.date.slice(5), padL + i * slot, H - 10);
+    }
+  });
+  $("#trends-legend").innerHTML = names
+    .map(
+      (n) =>
+        `<span><i style="background:${categories[n].color}"></i>${categories[n].label}</span>`,
+    )
+    .join("");
+}
+function fmtMinutes(m) {
+  if (m === null || m === undefined) return "—";
+  return m < 60 ? `${m}m` : `${Math.round(m / 6) / 10}h`;
+}
+$("#trends").onclick = async () => {
+  $("#trends-stats").innerHTML = `<p class="comments-empty">Loading…</p>`;
+  $("#trends-dialog").showModal();
+  try {
+    const trends = await api("/trends");
+    drawTrends(trends.days);
+    const t = trends.totals;
+    $("#trends-stats").innerHTML =
+      `<div><strong>${t.active}</strong><span>Active</span></div>` +
+      `<div><strong>${t.resolved}</strong><span>Cleared</span></div>` +
+      `<div><strong>${t.notes}</strong><span>Neighbor notes</span></div>` +
+      `<div><strong>${t.confirmations}</strong><span>Confirmations</span></div>` +
+      `<div><strong>${fmtMinutes(trends.avgResolutionMinutes)}</strong><span>Avg. time to clear</span></div>`;
+  } catch {
+    $("#trends-stats").innerHTML =
+      `<p class="comments-empty">Could not load trends.</p>`;
+  }
+};
+$("#export-geojson").onclick = () => {
+  const rows = visible();
+  if (!rows.length) return toast("Nothing to export with these filters.");
+  const blob = new Blob([JSON.stringify(toGeoJSON(rows), null, 2)], {
+    type: "application/geo+json;charset=utf-8",
+  });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `city-friction-${new Date().toISOString().slice(0, 10)}.geojson`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+  toast(
+    `Exported ${rows.length} report${rows.length === 1 ? "" : "s"} as GeoJSON.`,
+  );
+};
+$("#import-geojson").onclick = () => {
+  $("#import-error").textContent = "";
+  $("#import-status").textContent = "";
+  $("#import-form").reset();
+  $("#import-dialog").showModal();
+};
+$("#import-form").onsubmit = async (e) => {
+  e.preventDefault();
+  const button = e.target.querySelector(".submit");
+  const file = e.target.elements.file.files[0];
+  if (!file) return;
+  button.disabled = true;
+  $("#import-error").textContent = "";
+  $("#import-status").textContent = "Reading file…";
+  try {
+    const features = parseImport(await file.text());
+    let created = 0,
+      merged = 0,
+      skipped = 0;
+    const problems = [];
+    for (let i = 0; i < features.length; i++) {
+      let body;
+      try {
+        body = validateImportFeature(features[i], i);
+      } catch (error) {
+        skipped++;
+        if (problems.length < 3) problems.push(error.message);
+        continue;
+      }
+      try {
+        const result = await api("/reports", body);
+        if (result.merged) merged++;
+        else created++;
+      } catch (error) {
+        skipped++;
+        if (problems.length < 3)
+          problems.push(`Feature ${i + 1}: ${error.message}`);
+      }
+      $("#import-status").textContent =
+        `Importing… ${i + 1}/${features.length}`;
+    }
+    $("#import-dialog").close();
+    e.target.reset();
+    const parts = [];
+    if (created) parts.push(`${created} added`);
+    if (merged) parts.push(`${merged} merged into existing reports`);
+    if (skipped) parts.push(`${skipped} skipped`);
+    toast(
+      `Import finished: ${parts.join(", ") || "nothing to import"}.${problems.length ? " First issues: " + problems.join(" ") : ""}`,
+    );
+    await refresh();
+  } catch (error) {
+    $("#import-error").textContent = error.message;
+  } finally {
+    button.disabled = false;
+  }
+};
 $("#major-only").onchange = (e) => {
   majorOnly = e.target.checked;
   render();
@@ -420,14 +847,42 @@ $("#detail").onclick = async (e) => {
     render();
     return;
   }
+  if (e.target.closest("#flag-report")) {
+    $("#flag-error").textContent = "";
+    $("#flag-form").reset();
+    $("#flag-dialog").showModal();
+    return;
+  }
   if (e.target.closest("#close-detail")) {
-    selected = null;
-    lastDetailKey = null;
-    const url = new URL(location.href);
-    url.searchParams.delete("report");
-    history.replaceState(null, "", url);
-    $("#detail").hidden = true;
-    render();
+    closeDetail();
+    return;
+  }
+  const react = e.target.closest("[data-react]");
+  if (react) {
+    react.disabled = true;
+    try {
+      const result = await api(`/comments/${react.dataset.react}/react`);
+      react.innerHTML = helpfulLabel(result.helpfulCount);
+      react.setAttribute("aria-pressed", String(result.helpful));
+    } catch (error) {
+      toast(error.message);
+      react.disabled = false;
+    }
+    return;
+  }
+  const replyBtn = e.target.closest("[data-reply]");
+  if (replyBtn) {
+    const card = replyBtn.closest(".comment");
+    const existing = card.querySelector(".reply-form");
+    if (existing) {
+      existing.remove();
+      return;
+    }
+    card.insertAdjacentHTML(
+      "beforeend",
+      `<form class="reply-form"><input name="note" maxlength="300" placeholder="Write a reply…" aria-label="Write a reply" autocomplete="off"><button type="submit">Reply</button></form><p class="comment-error" role="alert"></p>`,
+    );
+    card.querySelector(".reply-form input").focus();
     return;
   }
   const b = e.target.closest("[data-vote]");
@@ -447,24 +902,43 @@ $("#detail").onclick = async (e) => {
   }
 };
 $("#detail").addEventListener("submit", async (e) => {
-  if (e.target.id !== "comment-form") return;
+  const isReply = e.target.classList.contains("reply-form");
+  if (e.target.id !== "comment-form" && !isReply) return;
   e.preventDefault();
   const input = e.target.elements.note;
   const button = e.target.querySelector("button");
   const text = input.value.trim();
   if (!text || !selected) return;
   button.disabled = true;
-  $("#comment-error").textContent = "";
+  const errorEl = isReply
+    ? e.target.parentElement.querySelector(".comment-error")
+    : $("#comment-error");
+  if (errorEl) errorEl.textContent = "";
   try {
-    const comment = await api(`/reports/${selected}/comments`, {
-      body: text,
-    });
+    const parentId = isReply
+      ? e.target.closest(".comment").dataset.comment
+      : null;
+    const comment = await api(
+      `/reports/${selected}/comments`,
+      parentId ? { body: text, parentId } : { body: text },
+    );
     input.value = "";
-    const list = $("#comment-list");
-    if (list) {
-      const empty = list.querySelector(".comments-empty");
-      if (empty) empty.remove();
-      list.insertAdjacentHTML("beforeend", commentHtml(comment));
+    if (isReply) {
+      const card = e.target.closest(".comment");
+      let replies = card.querySelector(".replies");
+      if (!replies) {
+        card.insertAdjacentHTML("beforeend", '<div class="replies"></div>');
+        replies = card.querySelector(".replies");
+      }
+      replies.insertAdjacentHTML("beforeend", replyHtml(comment));
+      e.target.remove();
+    } else {
+      const list = $("#comment-list");
+      if (list) {
+        const empty = list.querySelector(".comments-empty");
+        if (empty) empty.remove();
+        list.insertAdjacentHTML("beforeend", commentHtml(comment));
+      }
     }
     const r = reports.find((x) => x.id === selected);
     if (r) {
@@ -474,9 +948,10 @@ $("#detail").addEventListener("submit", async (e) => {
       lastDetailKey = null;
       render();
     }
-    toast("Note posted. Thanks for the heads-up.");
+    toast(isReply ? "Reply posted." : "Note posted. Thanks for the heads-up.");
   } catch (error) {
-    $("#comment-error").textContent = error.message;
+    if (errorEl) errorEl.textContent = error.message;
+    else toast(error.message);
   } finally {
     button.disabled = false;
   }
@@ -491,6 +966,17 @@ function openReport() {
 $("#report").onclick = openReport;
 $("#report-bottom").onclick = openReport;
 map.on("click", (e) => {
+  if (tripMode) {
+    tripClick(e.latlng);
+    return;
+  }
+  if (alertMode) {
+    alertAnchor = e.latlng;
+    $("#alert-error").textContent = "";
+    $("#alert-form").reset();
+    $("#alert-dialog").showModal();
+    return;
+  }
   chosen = e.latlng;
   if (pin) map.removeLayer(pin);
   pin = L.circleMarker(chosen, { radius: 8, color: "#174f40" }).addTo(map);
@@ -532,6 +1018,27 @@ $("#report-form").onsubmit = async (e) => {
     );
   } catch (error) {
     $("#form-error").textContent = error.message;
+  } finally {
+    button.disabled = false;
+  }
+};
+$("#flag-form").onsubmit = async (e) => {
+  e.preventDefault();
+  const reason = new FormData(e.target).get("reason");
+  const button = e.target.querySelector(".submit");
+  button.disabled = true;
+  $("#flag-error").textContent = "";
+  try {
+    const result = await api(`/reports/${selected}/flag`, { reason });
+    $("#flag-dialog").close();
+    toast(
+      result.hidden
+        ? "Thanks — this report is now hidden pending review."
+        : `Thanks. That's flag ${result.flagCount} of 3 to hide it.`,
+    );
+    await refresh();
+  } catch (error) {
+    $("#flag-error").textContent = error.message;
   } finally {
     button.disabled = false;
   }

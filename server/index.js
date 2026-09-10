@@ -11,7 +11,7 @@ const store = createStore(
   process.env.SEED_DEMO !== "false",
 );
 app.disable("x-powered-by");
-app.use("/api", createApi(store));
+app.use("/api", createApi(store, { adminToken: process.env.ADMIN_TOKEN }));
 if (process.env.NODE_ENV === "production") {
   app.use(express.static(resolve("dist")));
   app.get("/{*path}", (_, res) => res.sendFile(resolve("dist/index.html")));

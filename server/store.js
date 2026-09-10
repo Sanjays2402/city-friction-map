@@ -1,18 +1,30 @@
 import { DatabaseSync } from "node:sqlite";
 import { randomUUID } from "node:crypto";
 import {
+  HIDE_AFTER_FLAGS,
   anonymize,
+  categories,
+  distance,
   findDuplicate,
   prediction,
+  validateAlert,
   validateComment,
+  validateFlag,
   validateReport,
 } from "./domain.js";
 import { InputError } from "./errors.js";
 export function createStore(path = ":memory:", seed = true) {
   const db = new DatabaseSync(path);
   db.exec(
-    `PRAGMA journal_mode=WAL; CREATE TABLE IF NOT EXISTS reports (id TEXT PRIMARY KEY, payload TEXT NOT NULL); CREATE TABLE IF NOT EXISTS votes (report_id TEXT, visitor TEXT, action TEXT, PRIMARY KEY(report_id,visitor,action)); CREATE TABLE IF NOT EXISTS comments (id TEXT PRIMARY KEY, report_id TEXT NOT NULL, visitor TEXT NOT NULL, body TEXT NOT NULL, created_at INTEGER NOT NULL); CREATE INDEX IF NOT EXISTS idx_comments_report ON comments(report_id);`,
+    `PRAGMA journal_mode=WAL; CREATE TABLE IF NOT EXISTS reports (id TEXT PRIMARY KEY, payload TEXT NOT NULL); CREATE TABLE IF NOT EXISTS votes (report_id TEXT, visitor TEXT, action TEXT, PRIMARY KEY(report_id,visitor,action)); CREATE TABLE IF NOT EXISTS comments (id TEXT PRIMARY KEY, report_id TEXT NOT NULL, visitor TEXT NOT NULL, body TEXT NOT NULL, created_at INTEGER NOT NULL, parent_id TEXT); CREATE INDEX IF NOT EXISTS idx_comments_report ON comments(report_id); CREATE TABLE IF NOT EXISTS flags (report_id TEXT NOT NULL, visitor TEXT NOT NULL, reason TEXT NOT NULL, created_at INTEGER NOT NULL, PRIMARY KEY(report_id,visitor)); CREATE INDEX IF NOT EXISTS idx_flags_report ON flags(report_id); CREATE TABLE IF NOT EXISTS reactions (comment_id TEXT NOT NULL, visitor TEXT NOT NULL, kind TEXT NOT NULL, PRIMARY KEY(comment_id,visitor)); CREATE TABLE IF NOT EXISTS alerts (id TEXT PRIMARY KEY, visitor TEXT NOT NULL, lat REAL NOT NULL, lng REAL NOT NULL, radius_m INTEGER NOT NULL, label TEXT NOT NULL, created_at INTEGER NOT NULL); CREATE INDEX IF NOT EXISTS idx_alerts_visitor ON alerts(visitor);`,
   );
+  // Upgrade path: databases created before threaded replies lack parent_id.
+  const commentColumns = db
+    .prepare("PRAGMA table_info(comments)")
+    .all()
+    .map((c) => c.name);
+  if (!commentColumns.includes("parent_id"))
+    db.exec("ALTER TABLE comments ADD COLUMN parent_id TEXT");
   const all = () =>
     db
       .prepare("SELECT payload FROM reports")
@@ -32,12 +44,44 @@ export function createStore(path = ":memory:", seed = true) {
       counts[row.report_id] = row.c;
     return counts;
   };
-  const toComment = (row) => ({
+  const reactionCounts = () => {
+    const counts = {};
+    for (const row of db
+      .prepare(
+        "SELECT comment_id, COUNT(*) AS c FROM reactions GROUP BY comment_id",
+      )
+      .all())
+      counts[row.comment_id] = row.c;
+    return counts;
+  };
+  const flagCounts = () => {
+    const counts = {};
+    for (const row of db
+      .prepare("SELECT report_id, COUNT(*) AS c FROM flags GROUP BY report_id")
+      .all())
+      counts[row.report_id] = row.c;
+    return counts;
+  };
+  const toAlert = (row) => ({
+    id: row.id,
+    lat: row.lat,
+    lng: row.lng,
+    radiusM: row.radius_m ?? row.radiusM,
+    label: row.label,
+    createdAt: row.created_at ?? row.createdAt,
+  });
+  const toComment = (row, counts = {}) => ({
     id: row.id,
     body: row.body,
     createdAt: row.created_at,
     author: anonymize(row.visitor),
+    helpfulCount: counts[row.id] || 0,
   });
+  const commentCountFor = (id) =>
+    db.prepare("SELECT COUNT(*) AS c FROM comments WHERE report_id=?").get(id)
+      .c;
+  const flagCountFor = (id) =>
+    db.prepare("SELECT COUNT(*) AS c FROM flags WHERE report_id=?").get(id).c;
   const transaction = (operation) => {
     db.exec("BEGIN IMMEDIATE");
     try {
@@ -184,13 +228,27 @@ export function createStore(path = ":memory:", seed = true) {
   return {
     list: () => {
       const counts = commentCounts();
+      const flags = flagCounts();
       return all()
         .sort((a, b) => b.updatedAt - a.updatedAt)
         .map((r) => ({
           ...r,
+          hidden: !!r.hidden,
+          flagCount: flags[r.id] || 0,
           commentCount: counts[r.id] || 0,
           prediction: prediction(r),
         }));
+    },
+    get(id) {
+      const r = all().find((r) => r.id === id);
+      if (!r) throw new InputError("Report not found.", 404);
+      return {
+        ...r,
+        hidden: !!r.hidden,
+        flagCount: flagCountFor(id),
+        commentCount: commentCountFor(id),
+        prediction: prediction(r),
+      };
     },
     create(body, visitor) {
       const input = validateReport(body),
@@ -204,6 +262,7 @@ export function createStore(path = ":memory:", seed = true) {
       }
       const report = {
         id: randomUUID(),
+        creator: visitor,
         ...Object.fromEntries(
           [
             "category",
@@ -242,6 +301,11 @@ export function createStore(path = ":memory:", seed = true) {
           throw new InputError("Unknown action.");
         const r = all().find((r) => r.id === id);
         if (!r) throw new InputError("Report not found.", 404);
+        if (r.hidden)
+          throw new InputError(
+            "This report is hidden while under review.",
+            409,
+          );
         if (r.status !== "active")
           throw new InputError("This report has already cleared.", 409);
         const insert = db
@@ -260,43 +324,264 @@ export function createStore(path = ":memory:", seed = true) {
           }
         }
         save(r);
-        const commentCount = db
-          .prepare("SELECT COUNT(*) AS c FROM comments WHERE report_id=?")
-          .get(r.id).c;
+        const commentCount = commentCountFor(r.id);
         return { ...r, commentCount, prediction: prediction(r) };
+      });
+    },
+    flag(reportId, visitor, reason) {
+      const clean = validateFlag({ reason });
+      return transaction(() => {
+        const r = all().find((r) => r.id === reportId);
+        if (!r) throw new InputError("Report not found.", 404);
+        const insert = db
+          .prepare("INSERT OR IGNORE INTO flags VALUES (?,?,?,?)")
+          .run(reportId, visitor, clean, Date.now());
+        if (!insert.changes)
+          throw new InputError("You already flagged this report.", 409);
+        const flagCount = flagCountFor(reportId);
+        let hidden = !!r.hidden;
+        if (!hidden && flagCount >= HIDE_AFTER_FLAGS) {
+          r.hidden = true;
+          hidden = true;
+          save(r);
+        }
+        return { id: reportId, flagCount, hidden };
+      });
+    },
+    moderate(id, action) {
+      if (!["hide", "restore", "delete"].includes(action))
+        throw new InputError("Unknown moderation action.");
+      return transaction(() => {
+        const r = all().find((r) => r.id === id);
+        if (!r) throw new InputError("Report not found.", 404);
+        if (action === "delete") {
+          db.prepare("DELETE FROM reports WHERE id=?").run(id);
+          for (const table of ["votes", "comments", "flags"])
+            db.prepare(`DELETE FROM ${table} WHERE report_id=?`).run(id);
+          db.prepare(
+            "DELETE FROM reactions WHERE comment_id IN (SELECT id FROM comments WHERE report_id=?)",
+          ).run(id);
+          return { id, deleted: true };
+        }
+        r.hidden = action === "hide";
+        save(r);
+        return { id, hidden: r.hidden, flagCount: flagCountFor(id) };
       });
     },
     listComments(reportId) {
       if (!all().some((r) => r.id === reportId))
         throw new InputError("Report not found.", 404);
-      return db
+      const counts = reactionCounts();
+      const rows = db
         .prepare(
-          "SELECT id, body, visitor, created_at FROM comments WHERE report_id=? ORDER BY created_at ASC",
+          "SELECT id, body, visitor, created_at, parent_id FROM comments WHERE report_id=? ORDER BY created_at ASC",
         )
-        .all(reportId)
-        .map(toComment);
+        .all(reportId);
+      const byId = {},
+        tops = [];
+      for (const row of rows) {
+        const comment = { ...toComment(row, counts), replies: [] };
+        byId[row.id] = comment;
+        const parent = row.parent_id && byId[row.parent_id];
+        if (parent) parent.replies.push(comment);
+        else tops.push(comment);
+      }
+      return tops;
     },
     addComment(reportId, visitor, body) {
       const text = validateComment(body);
+      const parentId =
+        body && typeof body.parentId === "string" ? body.parentId : null;
       return transaction(() => {
-        if (!all().some((r) => r.id === reportId))
-          throw new InputError("Report not found.", 404);
+        const r = all().find((r) => r.id === reportId);
+        if (!r) throw new InputError("Report not found.", 404);
+        if (r.hidden)
+          throw new InputError(
+            "This report is hidden while under review.",
+            409,
+          );
+        if (parentId) {
+          const parent = db
+            .prepare("SELECT id, report_id, parent_id FROM comments WHERE id=?")
+            .get(parentId);
+          if (!parent || parent.report_id !== reportId)
+            throw new InputError(
+              "The note you are replying to was not found.",
+              404,
+            );
+          if (parent.parent_id)
+            throw new InputError(
+              "Replies can only be added to top-level notes.",
+            );
+        }
         const row = {
           id: randomUUID(),
           report_id: reportId,
           visitor,
           body: text,
           created_at: Date.now(),
+          parent_id: parentId,
         };
-        db.prepare("INSERT INTO comments VALUES (?,?,?,?,?)").run(
+        db.prepare("INSERT INTO comments VALUES (?,?,?,?,?,?)").run(
           row.id,
           row.report_id,
           row.visitor,
           row.body,
           row.created_at,
+          row.parent_id,
         );
         return toComment(row);
       });
+    },
+    toggleReaction(commentId, visitor) {
+      return transaction(() => {
+        if (!db.prepare("SELECT 1 FROM comments WHERE id=?").get(commentId))
+          throw new InputError("Note not found.", 404);
+        const had = db
+          .prepare("SELECT 1 FROM reactions WHERE comment_id=? AND visitor=?")
+          .get(commentId, visitor);
+        if (had)
+          db.prepare(
+            "DELETE FROM reactions WHERE comment_id=? AND visitor=?",
+          ).run(commentId, visitor);
+        else
+          db.prepare("INSERT INTO reactions VALUES (?,?,?)").run(
+            commentId,
+            visitor,
+            "helpful",
+          );
+        const helpfulCount = db
+          .prepare("SELECT COUNT(*) AS c FROM reactions WHERE comment_id=?")
+          .get(commentId).c;
+        return { id: commentId, helpful: !had, helpfulCount };
+      });
+    },
+    createAlert(visitor, body) {
+      const zone = validateAlert(body);
+      const row = {
+        id: randomUUID(),
+        visitor,
+        ...zone,
+        createdAt: Date.now(),
+      };
+      db.prepare("INSERT INTO alerts VALUES (?,?,?,?,?,?,?)").run(
+        row.id,
+        visitor,
+        zone.lat,
+        zone.lng,
+        zone.radiusM,
+        zone.label,
+        row.createdAt,
+      );
+      return toAlert(row);
+    },
+    listAlerts(visitor) {
+      return db
+        .prepare(
+          "SELECT id, lat, lng, radius_m, label, created_at FROM alerts WHERE visitor=? ORDER BY created_at DESC",
+        )
+        .all(visitor)
+        .map(toAlert);
+    },
+    deleteAlert(visitor, id) {
+      const gone = db
+        .prepare("DELETE FROM alerts WHERE id=? AND visitor=?")
+        .run(id, visitor).changes;
+      if (!gone) throw new InputError("Alert zone not found.", 404);
+      return { id, deleted: true };
+    },
+    alertMatches(visitor) {
+      const active = all().filter((r) => r.status === "active" && !r.hidden);
+      return this.listAlerts(visitor).map((zone) => {
+        const matches = [];
+        for (const r of active) {
+          const meters = distance(zone, r);
+          if (meters <= zone.radiusM)
+            matches.push({
+              id: r.id,
+              title: r.title,
+              category: r.category,
+              severity: r.severity,
+              lat: r.lat,
+              lng: r.lng,
+              distanceM: Math.round(meters),
+            });
+        }
+        matches.sort((a, b) => a.distanceM - b.distanceM);
+        return { zone, matches };
+      });
+    },
+    contributors() {
+      const stats = {};
+      const bump = (visitor) =>
+        (stats[visitor] = stats[visitor] || {
+          reports: 0,
+          notes: 0,
+          confirmations: 0,
+        });
+      for (const r of all()) if (r.creator) bump(r.creator).reports++;
+      for (const row of db
+        .prepare("SELECT visitor, COUNT(*) AS c FROM comments GROUP BY visitor")
+        .all())
+        bump(row.visitor).notes += row.c;
+      for (const row of db
+        .prepare(
+          "SELECT visitor, COUNT(*) AS c FROM votes WHERE action='confirm' GROUP BY visitor",
+        )
+        .all())
+        bump(row.visitor).confirmations += row.c;
+      return Object.entries(stats)
+        .map(([visitor, s]) => ({
+          name: anonymize(visitor),
+          reports: s.reports,
+          notes: s.notes,
+          confirmations: s.confirmations,
+          score: s.reports * 3 + s.notes * 2 + s.confirmations,
+        }))
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 20);
+    },
+    trends() {
+      const now = Date.now(),
+        dayMs = 86400000,
+        buckets = [];
+      for (let i = 13; i >= 0; i--) {
+        const start = now - (i + 1) * dayMs,
+          end = now - i * dayMs,
+          counts = { date: new Date(end).toISOString().slice(0, 10) };
+        for (const name of Object.keys(categories)) counts[name] = 0;
+        buckets.push({ start, end, counts });
+      }
+      let active = 0,
+        resolved = 0;
+      const resolutionMinutes = [];
+      for (const r of all()) {
+        if (r.status === "resolved") {
+          resolved++;
+          if (r.resolvedAt > r.createdAt)
+            resolutionMinutes.push((r.resolvedAt - r.createdAt) / 60000);
+        } else if (!r.hidden) active++;
+        if (r.createdAt >= now - 14 * dayMs)
+          for (const b of buckets)
+            if (r.createdAt >= b.start && r.createdAt < b.end) {
+              b.counts[r.category]++;
+              break;
+            }
+      }
+      const notes = db.prepare("SELECT COUNT(*) AS c FROM comments").get().c;
+      const confirmations = db
+        .prepare("SELECT COUNT(*) AS c FROM votes WHERE action='confirm'")
+        .get().c;
+      return {
+        days: buckets.map((b) => b.counts),
+        avgResolutionMinutes: resolutionMinutes.length
+          ? Math.round(
+              resolutionMinutes.reduce((a, b) => a + b, 0) /
+                resolutionMinutes.length,
+            )
+          : null,
+        totals: { active, resolved, notes, confirmations },
+      };
     },
     close: () => db.close(),
   };

@@ -81,15 +81,69 @@ export function anonymize(visitor) {
   return `Neighbor ${clean || "anon"}`;
 }
 export function findDuplicate(reports, incoming, now = Date.now()) {
-  return reports
-    .filter(
-      (r) =>
-        r.status === "active" &&
-        r.category === incoming.category &&
-        now - r.updatedAt < 90 * 60000 &&
-        distance(r, incoming) <= 90,
-    )
-    .sort((a, b) => distance(a, incoming) - distance(b, incoming))[0];
+  const candidates = reports.filter((r) => {
+    if (r.status !== "active" || r.hidden) return false;
+    if (r.category !== incoming.category) return false;
+    if (now - r.updatedAt >= 90 * 60000) return false;
+    const d = distance(r, incoming);
+    if (d <= 90) return true;
+    // A clearly similar headline a little farther away is probably the same
+    // incident described twice.
+    return d <= 250 && titleSimilarity(r.title, incoming.title) >= 0.5;
+  });
+  return candidates.sort(
+    (a, b) => distance(a, incoming) - distance(b, incoming),
+  )[0];
+}
+export function titleSimilarity(a, b) {
+  const tokens = (s) =>
+    new Set(
+      String(s)
+        .toLowerCase()
+        .split(/[^a-z0-9]+/)
+        .filter((w) => w.length > 2),
+    );
+  const first = tokens(a),
+    second = tokens(b);
+  if (!first.size || !second.size) return 0;
+  let shared = 0;
+  for (const word of first) if (second.has(word)) shared++;
+  return shared / (first.size + second.size - shared);
+}
+export const FLAG_REASONS = [
+  "spam",
+  "inaccurate",
+  "inappropriate",
+  "duplicate",
+];
+export function validateFlag(body) {
+  const reason = body && typeof body.reason === "string" ? body.reason : "";
+  if (!FLAG_REASONS.includes(reason))
+    throw new InputError(`Choose a reason: ${FLAG_REASONS.join(", ")}.`);
+  return reason;
+}
+export const HIDE_AFTER_FLAGS = 3;
+const SF_BOUNDS = { lat: [37.7, 37.84], lng: [-122.53, -122.35] };
+export function validateAlert(body) {
+  if (!body || typeof body !== "object")
+    throw new InputError("Describe the alert zone.");
+  const label = typeof body.label === "string" ? body.label.trim() : "";
+  if (label.length < 1 || label.length > 60)
+    throw new InputError("Name the zone (1–60 characters).");
+  const { lat, lng } = body;
+  if (
+    !Number.isFinite(lat) ||
+    !Number.isFinite(lng) ||
+    lat < SF_BOUNDS.lat[0] ||
+    lat > SF_BOUNDS.lat[1] ||
+    lng < SF_BOUNDS.lng[0] ||
+    lng > SF_BOUNDS.lng[1]
+  )
+    throw new InputError("Place the zone inside San Francisco.");
+  const radiusM = Number(body.radiusM);
+  if (!Number.isInteger(radiusM) || radiusM < 100 || radiusM > 5000)
+    throw new InputError("Choose a radius between 100 and 5000 meters.");
+  return { label, lat, lng, radiusM };
 }
 export function prediction(report, now = Date.now()) {
   const duration =

@@ -165,6 +165,26 @@ test("followed sets and snapshots round-trip through storage", () => {
   assert.deepEqual(readIdSet({ getItem: () => "nope" }, "k"), new Set());
   assert.deepEqual(readSnapshot({ getItem: () => "nope" }), {});
 });
+test("hidden reports are excluded unless explicitly included", () => {
+  const hidden = { ...rows[0], hidden: true };
+  assert.deepEqual(
+    filterReports([hidden, rows[1]], base).map((r) => r.id),
+    ["b"],
+  );
+  assert.deepEqual(
+    filterReports([hidden, rows[1]], { ...base, includeHidden: true }).map(
+      (r) => r.id,
+    ),
+    ["a", "b"],
+  );
+});
+test("detectUpdates notices when a followed report is hidden", () => {
+  const before = snapshotReports(rows);
+  const after = rows.map((r) => (r.id === "a" ? { ...r, hidden: true } : r));
+  const updates = detectUpdates(after, new Set(["a"]), before);
+  assert.equal(updates.length, 1);
+  assert.deepEqual(updates[0].changes, ["hidden after community flags"]);
+});
 test("summary counts active impact and stale reports separately from resolved", () => {
   assert.deepEqual(summarize(rows), {
     active: 2,

@@ -5,7 +5,10 @@ import {
   distance,
   findDuplicate,
   prediction,
+  titleSimilarity,
+  validateAlert,
   validateComment,
+  validateFlag,
   validateReport,
 } from "../server/domain.js";
 import { createStore } from "../server/store.js";
@@ -65,6 +68,84 @@ test("comments need 1 to 300 characters and authors stay anonymous", () => {
     assert.throws(() => validateComment({ body }));
   assert.match(anonymize("visitor-abc-123"), /^Neighbor [a-zA-Z0-9]{1,6}$/);
   assert.ok(!anonymize("visitor-abc-123").includes("visitor-abc-123"));
+});
+test("title similarity uses token Jaccard", () => {
+  assert.equal(titleSimilarity("Long coffee queue", "Long coffee queue"), 1);
+  assert.ok(
+    titleSimilarity(
+      "Sidewalk blocked by roadwork",
+      "Sidewalk blocked near roadwork",
+    ) >= 0.5,
+  );
+  assert.ok(titleSimilarity("Coffee queue", "Loud drilling noise") < 0.5);
+  assert.equal(titleSimilarity("", "something"), 0);
+  assert.equal(titleSimilarity("a b", "c d"), 0);
+});
+test("flag reasons are validated", () => {
+  assert.equal(validateFlag({ reason: "spam" }), "spam");
+  for (const reason of ["", "bogus", null, 42, undefined])
+    assert.throws(() => validateFlag({ reason }));
+});
+test("alert zones are validated against SF bounds", () => {
+  assert.deepEqual(
+    validateAlert({ label: " Home ", radiusM: 250, lat: 37.77, lng: -122.42 }),
+    { label: "Home", radiusM: 250, lat: 37.77, lng: -122.42 },
+  );
+  for (const zone of [
+    { label: "", radiusM: 250, lat: 37.77, lng: -122.42 },
+    { label: "x".repeat(61), radiusM: 250, lat: 37.77, lng: -122.42 },
+    { label: "Home", radiusM: 99, lat: 37.77, lng: -122.42 },
+    { label: "Home", radiusM: 5001, lat: 37.77, lng: -122.42 },
+    { label: "Home", radiusM: 250.5, lat: 37.77, lng: -122.42 },
+    { label: "Home", radiusM: 250, lat: 40.7, lng: -74.0 },
+    { label: "Home", radiusM: 250, lat: 37.77, lng: -122.6 },
+    { label: "Home", radiusM: 250, lat: NaN, lng: -122.42 },
+    null,
+    "Home",
+  ])
+    assert.throws(() => validateAlert(zone));
+});
+test("duplicates merge on similar headlines within 250 meters", () => {
+  const s = createStore(":memory:", false);
+  try {
+    const a = s.create(
+      { ...report, title: "Sidewalk blocked by roadwork" },
+      "visitor-one",
+    );
+    assert.equal(a.merged, false);
+    // About 200 meters away with a similar headline: same incident.
+    const b = s.create(
+      {
+        ...report,
+        title: "Sidewalk blocked near roadwork",
+        lat: 37.7718,
+      },
+      "visitor-two",
+    );
+    assert.equal(b.merged, true);
+    assert.equal(b.report.id, a.report.id);
+    // About 200 meters away with a different headline: separate incident.
+    const c = s.create(
+      {
+        ...report,
+        title: "Loud drilling all afternoon",
+        lat: 37.7718,
+        lng: -122.425,
+      },
+      "visitor-three",
+    );
+    assert.equal(c.merged, false);
+    assert.equal(s.list().length, 2);
+    // Hidden reports never absorb new reports.
+    s.moderate(a.report.id, "hide");
+    const d = s.create(
+      { ...report, title: "Sidewalk blocked by roadwork", lat: 37.7701 },
+      "visitor-four",
+    );
+    assert.equal(d.merged, false);
+  } finally {
+    s.close();
+  }
 });
 test("stale predictions remain unknown rather than resolved", () => {
   assert.equal(prediction({ ...report, updatedAt: 0 }).minutes, null);
