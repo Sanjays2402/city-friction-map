@@ -8,7 +8,7 @@
 
 Spot long queues, blocked sidewalks, noisy roadwork, empty bike docks, closed restrooms, and poor reception. Share a heads-up, confirm what’s still there, and help the next person find a smoother day.
 
-![City overview with filters and interactive map](docs/screenshots/desktop.png)
+![City overview with filters, alert zones, trip check, heatmap, and interactive map](docs/screenshots/desktop.png)
 
 ## Features
 
@@ -33,7 +33,7 @@ Reports persist in SQLite and refresh across browsers every 15 seconds. The resp
 
 <table>
   <tr>
-    <td width="70%"><img src="docs/screenshots/report-detail.png" alt="Report details with confidence, community votes, save and share controls" /></td>
+    <td width="70%"><img src="docs/screenshots/report-detail.png" alt="Report details with confidence, community votes, neighbor notes, flagging, save and share controls" /></td>
     <td width="30%"><img src="docs/screenshots/mobile.png" alt="Mobile city overview, filters, map and report list" /></td>
   </tr>
   <tr><td align="center">Report details & community verification</td><td align="center">Mobile exploration</td></tr>
@@ -90,7 +90,7 @@ The suite covers report validation, geographic matching, vote conflicts, databas
 
 ## Project scope
 
-This is a working portfolio MVP scoped to San Francisco. Demo reports are fictional; clearance estimates are heuristics, not guarantees. Saved reports are browser-local, and shared links require access to the same server. Anonymous browser IDs are not verified identities. Public deployment would need authentication, moderation, rate limiting, and a suitable tile provider.
+This is a working portfolio MVP scoped to San Francisco. Demo reports are fictional; clearance estimates are heuristics, not guarantees. Saved reports are browser-local, and shared links require access to the same server. Anonymous browser IDs are not verified identities. Public deployment would still need real authentication, a suitable tile provider, and an `ADMIN_TOKEN` for the moderation endpoints.
 
 ## Credits
 

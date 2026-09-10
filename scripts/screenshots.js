@@ -3,7 +3,12 @@ import { mkdir } from "node:fs/promises";
 
 const base = process.argv[2] || "http://127.0.0.1:3000";
 await mkdir("docs/screenshots", { recursive: true });
-const browser = await chromium.launch();
+// CI installs the Playwright browser bundle; local runs can point at a
+// system Chromium with SCREENSHOT_CHROME=/path/to/chrome.
+const launchOptions = process.env.SCREENSHOT_CHROME
+  ? { executablePath: process.env.SCREENSHOT_CHROME }
+  : {};
+const browser = await chromium.launch(launchOptions);
 try {
   const page = await browser.newPage({
     viewport: { width: 1440, height: 1200 },
