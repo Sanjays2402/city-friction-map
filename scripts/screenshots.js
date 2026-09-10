@@ -5,9 +5,15 @@ const base = process.argv[2] || "http://127.0.0.1:3000";
 await mkdir("docs/screenshots", { recursive: true });
 // CI installs the Playwright browser bundle; local runs can point at a
 // system Chromium with SCREENSHOT_CHROME=/path/to/chrome.
-const launchOptions = process.env.SCREENSHOT_CHROME
-  ? { executablePath: process.env.SCREENSHOT_CHROME }
-  : {};
+// NOTE: if the capture browser has no public-internet egress, point the
+// built bundle at a local tile cache first (dist/ is gitignored, so the
+// shipped app always uses tile.openstreetmap.org directly).
+const launchOptions = {
+  args: ["--disable-dev-shm-usage"],
+  ...(process.env.SCREENSHOT_CHROME
+    ? { executablePath: process.env.SCREENSHOT_CHROME }
+    : {}),
+};
 const browser = await chromium.launch(launchOptions);
 
 async function settle(page, ms = 1200) {
