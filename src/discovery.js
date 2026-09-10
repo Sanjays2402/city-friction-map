@@ -1,4 +1,9 @@
-export function filterReports(reports, filters, saved = new Set()) {
+export function filterReports(
+  reports,
+  filters,
+  saved = new Set(),
+  followed = new Set(),
+) {
   const query = filters.query.toLowerCase().trim();
   const rows = reports.filter(
     (r) =>
@@ -7,6 +12,7 @@ export function filterReports(reports, filters, saved = new Set()) {
       (!filters.majorOnly || r.severity === 3) &&
       (!filters.hideDemo || !r.demo) &&
       (!filters.savedOnly || saved.has(r.id)) &&
+      (!filters.followedOnly || followed.has(r.id)) &&
       `${r.title} ${r.location} ${r.description}`.toLowerCase().includes(query),
   );
   return rows.sort((a, b) => {
@@ -29,12 +35,126 @@ export function summarize(reports) {
 }
 
 export function readSaved(storage) {
+  return readIdSet(storage, "friction-saved");
+}
+
+export function readFollowed(storage) {
+  return readIdSet(storage, "friction-followed");
+}
+
+export function readIdSet(storage, key) {
   try {
-    const value = JSON.parse(storage.getItem("friction-saved") || "[]");
+    const value = JSON.parse(storage.getItem(key) || "[]");
     return new Set(
       Array.isArray(value) ? value.filter((id) => typeof id === "string") : [],
     );
   } catch {
     return new Set();
   }
+}
+
+export function writeIdSet(storage, key, set) {
+  try {
+    storage.setItem(key, JSON.stringify([...set]));
+  } catch {
+    // Storage unavailable; the in-memory set still works for this session.
+  }
+}
+
+// A snapshot records the last-seen state of a report so background refreshes
+// can describe what actually changed on followed reports.
+export function snapshotReports(reports) {
+  const seen = {};
+  for (const r of reports)
+    seen[r.id] = {
+      updatedAt: r.updatedAt,
+      confirmations: r.confirmations,
+      commentCount: r.commentCount || 0,
+      clearVotes: r.clearVotes || 0,
+      status: r.status,
+    };
+  return seen;
+}
+
+export function readSnapshot(storage) {
+  try {
+    const value = JSON.parse(storage.getItem("friction-seen") || "{}");
+    return value && typeof value === "object" ? value : {};
+  } catch {
+    return {};
+  }
+}
+
+export function writeSnapshot(storage, seen) {
+  try {
+    storage.setItem("friction-seen", JSON.stringify(seen));
+  } catch {
+    // Session-only tracking when storage is unavailable.
+  }
+}
+
+export function detectUpdates(current, followed, seen) {
+  const updates = [];
+  for (const r of current) {
+    if (!followed.has(r.id)) continue;
+    const before = seen[r.id];
+    if (!before) continue;
+    const changes = [];
+    if (r.status === "resolved" && before.status !== "resolved") {
+      changes.push("cleared by the community");
+    } else if (r.status === "active") {
+      const fresh = r.confirmations - before.confirmations;
+      if (fresh > 0)
+        changes.push(`${fresh} new confirmation${fresh === 1 ? "" : "s"}`);
+      const notes = (r.commentCount || 0) - (before.commentCount || 0);
+      if (notes > 0)
+        changes.push(`${notes} new neighbor note${notes === 1 ? "" : "s"}`);
+      const clearing = (r.clearVotes || 0) - (before.clearVotes || 0);
+      if (clearing > 0) changes.push("a new clearance vote");
+    }
+    if (changes.length) updates.push({ id: r.id, title: r.title, changes });
+  }
+  return updates;
+}
+
+const csvCell = (value) => `"${String(value ?? "").replace(/"/g, '""')}"`;
+
+export function toCSV(reports) {
+  const header = [
+    "id",
+    "title",
+    "location",
+    "category",
+    "severity",
+    "status",
+    "confirmations",
+    "clear_votes",
+    "comments",
+    "latitude",
+    "longitude",
+    "created_at",
+    "updated_at",
+  ];
+  const lines = [header.join(",")];
+  for (const r of reports)
+    lines.push(
+      [
+        r.id,
+        r.title,
+        r.location,
+        r.category,
+        r.severity,
+        r.status,
+        r.confirmations,
+        r.clearVotes || 0,
+        r.commentCount || 0,
+        r.lat,
+        r.lng,
+        new Date(r.createdAt).toISOString(),
+        new Date(r.updatedAt).toISOString(),
+      ]
+        .map(csvCell)
+        .join(","),
+    );
+  return lines.join("\r\n") + "\r\n";
 }

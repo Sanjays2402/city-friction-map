@@ -103,3 +103,64 @@ test("HTTP rejects invalid bodies, missing identities and cross-origin writes", 
   const accepted = await request("/reports", report, { Origin: base });
   assert.equal(accepted.status, 201);
 });
+
+test("comments are listed per report and reject bad input", async (t) => {
+  const { base, request } = await fixture(t);
+  const created = await request("/reports", report);
+  const { report: saved } = await created.json();
+  assert.equal(saved.commentCount, 0);
+
+  const missing = await request("/reports/does-not-exist/comments", {
+    body: "hello",
+  });
+  assert.equal(missing.status, 404);
+
+  for (const body of [
+    { body: "" },
+    { body: "   " },
+    { body: "x".repeat(301) },
+  ]) {
+    const bad = await request(`/reports/${saved.id}/comments`, body);
+    assert.equal(bad.status, 400);
+  }
+
+  const posted = await request(`/reports/${saved.id}/comments`, {
+    body: "Still queued at noon",
+  });
+  assert.equal(posted.status, 201);
+  const comment = await posted.json();
+  assert.equal(comment.body, "Still queued at noon");
+  assert.match(comment.author, /^Neighbor /);
+  assert.ok(!JSON.stringify(comment).includes("test-visitor-0001"));
+
+  const listed = await fetch(base + `/api/reports/${saved.id}/comments`);
+  assert.equal(listed.status, 200);
+  assert.equal((await listed.json()).length, 1);
+
+  const reports = await (await fetch(base + "/api/reports")).json();
+  assert.equal(reports[0].commentCount, 1);
+
+  const missingList = await fetch(
+    base + "/api/reports/does-not-exist/comments",
+  );
+  assert.equal(missingList.status, 404);
+});
+
+test("reports accept an optional photo URL", async (t) => {
+  const { base, request } = await fixture(t);
+  const withPhoto = await request("/reports", {
+    ...report,
+    photoUrl: "https://example.com/obstacle.jpg",
+  });
+  assert.equal(withPhoto.status, 201);
+  assert.equal(
+    (await withPhoto.json()).report.photoUrl,
+    "https://example.com/obstacle.jpg",
+  );
+  const badPhoto = await request("/reports", {
+    ...report,
+    lat: 37.781,
+    photoUrl: "javascript:alert(1)",
+  });
+  assert.equal(badPhoto.status, 400);
+});

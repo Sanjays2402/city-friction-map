@@ -42,6 +42,32 @@ test("filter, report, confirm and clear a persisted incident", async ({
   );
   await context.close();
 });
+test("comment on a report, follow it, and filter to followed reports", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.locator(".report-card").first().click();
+  await expect(page.locator("#detail")).toBeVisible();
+  await page.locator("#comment-form input").fill("Still blocked at lunchtime");
+  await page.locator("#comment-form button").click();
+  await expect(page.locator(".comment").first()).toContainText(
+    "Still blocked at lunchtime",
+  );
+  await expect(page.locator(".comment-meta strong").first()).toContainText(
+    "Neighbor",
+  );
+  await page.locator("#follow-report").click();
+  await expect(page.locator("#follow-report")).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await page.locator("#followed-toggle").click();
+  await expect(page.locator(".report-card")).toHaveCount(1);
+  await page.reload();
+  await page.locator("#followed-toggle").click();
+  await expect(page.locator(".report-card")).toHaveCount(1);
+});
+
 test("mobile layout fits the viewport", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");

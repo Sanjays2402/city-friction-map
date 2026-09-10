@@ -2,7 +2,19 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "./style.css";
 import { categories } from "../server/domain.js";
-import { filterReports, summarize, readSaved } from "./discovery.js";
+import {
+  detectUpdates,
+  filterReports,
+  readFollowed,
+  readIdSet,
+  readSaved,
+  readSnapshot,
+  snapshotReports,
+  summarize,
+  toCSV,
+  writeIdSet,
+  writeSnapshot,
+} from "./discovery.js";
 const $ = (s) => document.querySelector(s),
   escape = (s) =>
     String(s).replace(
@@ -28,11 +40,17 @@ let reports = [],
   status = "active",
   lastUpdated = null;
 const saved = readSaved(localStorage);
+const followed = readFollowed(localStorage);
+const unseen = readIdSet(localStorage, "friction-unseen");
+let seen = readSnapshot(localStorage);
 let majorOnly = false,
   hideDemo = false,
   savedOnly = false,
+  followedOnly = false,
   sort = "recent";
 let initialReport = new URL(location.href).searchParams.get("report");
+let lastDetailKey = null,
+  commentsFor = null;
 $("#app").innerHTML = `
 <header><a class="brand" href="/" aria-label="City Friction home"><span class="brand-icon">↗</span> city<span>friction</span><sup>SF</sup></a><nav><span class="nav-active">Explore the city</span><button id="about">How it works ↗</button></nav><button class="primary" id="report">＋ Report friction</button></header>
 <main><section class="intro"><div><div class="eyebrow">A LITTLE LOCAL KNOWLEDGE GOES A LONG WAY</div><h1>Less friction.<br class="mobile-break"> More city.</h1><p>The little things between you and a good day. See them coming.</p></div><div class="city"><span class="pulse"></span> San Francisco <small>Community map · Demo enabled</small></div></section>
@@ -52,7 +70,7 @@ $("#app").innerHTML = `
   .map(([k, c]) => `<option value="${k}">${c.label}</option>`)
   .join(
     "",
-  )}</select></label><label>Short headline<input name="title" required minlength="3" maxlength="100" placeholder="e.g. Sidewalk blocked by roadwork"></label><label>Place or intersection<input name="location" required minlength="3" maxlength="100" placeholder="e.g. Market & 8th Street"></label><div class="form-row"><label>Latitude<input name="lat" type="number" step="any" min="37.70" max="37.84" required></label><label>Longitude<input name="lng" type="number" step="any" min="-122.53" max="-122.35" required></label></div><label>Impact<select name="severity"><option value="1">Minor · a little inconvenient</option><option value="2" selected>Moderate · plan around it</option><option value="3">Major · significant obstacle</option></select></label><label>Anything useful to know?<textarea name="description" maxlength="500" rows="3" placeholder="What would you tell a friend walking this way?"></textarea></label><p class="form-note">Similar reports within 90 meters may be merged. Reports are visible to everyone using this server.</p><p id="form-error" role="alert"></p><button class="primary submit" type="submit">Put it on the map ↗</button></form></dialog>
+  )}</select></label><label>Short headline<input name="title" required minlength="3" maxlength="100" placeholder="e.g. Sidewalk blocked by roadwork"></label><label>Place or intersection<input name="location" required minlength="3" maxlength="100" placeholder="e.g. Market & 8th Street"></label><div class="form-row"><label>Latitude<input name="lat" type="number" step="any" min="37.70" max="37.84" required></label><label>Longitude<input name="lng" type="number" step="any" min="-122.53" max="-122.35" required></label></div><label>Impact<select name="severity"><option value="1">Minor · a little inconvenient</option><option value="2" selected>Moderate · plan around it</option><option value="3">Major · significant obstacle</option></select></label><label>Anything useful to know?<textarea name="description" maxlength="500" rows="3" placeholder="What would you tell a friend walking this way?"></textarea></label><label>Photo URL <span class="optional-note">(optional)</span><input name="photoUrl" type="url" maxlength="500" placeholder="https://… a photo of the obstacle"></label><p class="form-note">Similar reports within 90 meters may be merged. Reports are visible to everyone using this server.</p><p id="form-error" role="alert"></p><button class="primary submit" type="submit">Put it on the map ↗</button></form></dialog>
 <dialog id="about-dialog"><button class="close" aria-label="Close explanation">×</button><div class="eyebrow">A SHARED PICTURE OF YOUR CITY</div><h2>Little reports. Real usefulness.</h2><p>Report an obstacle, confirm it’s still there, or tell your neighbors it has cleared. Two independent browser clearance votes resolve an issue.</p><h3>How estimates work</h3><p>Time ranges use category and impact, measured from the latest confirmation. They’re heuristic estimates, not trained forecasts. More confirmations improve the evidence label, but confidence is never a statistical probability.</p><h3>An honest starting point</h3><p>Initial San Francisco reports are fictional and labeled DEMO. New reports are saved in SQLite and shared across connected browsers. Updates refresh every 15 seconds. Anonymous browser IDs prevent casual repeated votes, but are not identity verification.</p></dialog><div id="toast" role="status"></div>`;
 $(".toolbar").insertAdjacentHTML(
   "beforebegin",
@@ -60,7 +78,7 @@ $(".toolbar").insertAdjacentHTML(
 );
 $(".toolbar").insertAdjacentHTML(
   "afterend",
-  `<section class="discovery-controls" aria-label="Report preferences"><div><button id="saved-toggle" class="preference" aria-pressed="false">☆ Saved reports <span id="saved-count">0</span></button><label><input id="major-only" type="checkbox"> Major impact only</label><label><input id="hide-demo" type="checkbox"> Hide demo reports</label></div><label class="sort-label">Sort by <select id="sort"><option value="recent">Latest update</option><option value="impact">Highest impact</option><option value="confirmed">Most confirmed</option></select></label></section>`,
+  `<section class="discovery-controls" aria-label="Report preferences"><div><button id="saved-toggle" class="preference" aria-pressed="false">☆ Saved reports <span id="saved-count">0</span></button><button id="followed-toggle" class="preference" aria-pressed="false">🔔 Followed <span id="followed-count">0</span></button><label><input id="major-only" type="checkbox"> Major impact only</label><label><input id="hide-demo" type="checkbox"> Hide demo reports</label><button id="export-csv" class="preference">⭳ Export CSV</button></div><label class="sort-label">Sort by <select id="sort"><option value="recent">Latest update</option><option value="impact">Highest impact</option><option value="confirmed">Most confirmed</option></select></label></section>`,
 );
 const map = L.map("map", { zoomControl: false }).setView(
   [37.775, -122.421],
@@ -110,8 +128,18 @@ function age(t) {
 function visible() {
   return filterReports(
     reports,
-    { status, category, query, majorOnly, hideDemo, savedOnly, sort },
+    {
+      status,
+      category,
+      query,
+      majorOnly,
+      hideDemo,
+      savedOnly,
+      followedOnly,
+      sort,
+    },
     saved,
+    followed,
   );
 }
 function render() {
@@ -119,20 +147,32 @@ function render() {
   $("#summary").innerHTML =
     `<div><span class="summary-symbol">◉</span><strong>${stats.active}</strong><span>Active heads-ups</span></div><div><span class="summary-symbol red">↗</span><strong>${stats.major}</strong><span>Major obstacles</span></div><div><span class="summary-symbol amber">◷</span><strong>${stats.stale}</strong><span>Need a fresh update</span></div><div><span class="summary-symbol">✓</span><strong>${stats.resolved}</strong><span>Community cleared</span></div><small>Citywide · ${hideDemo ? "community reports only" : "includes demo data"}</small>`;
   $("#saved-count").textContent = reports.filter((r) => saved.has(r.id)).length;
+  $("#followed-count").textContent = followed.size;
   $(".city small").textContent = reports.some((r) => r.demo)
     ? "Community map · Includes demo data"
     : "Community map · Shared reports";
   const rows = visible();
   $("#count").textContent =
     `${rows.length} ${status === "active" ? "active heads-ups" : "cleared reports"} · all mapped areas`;
+  const emptyIcon = savedOnly ? "☆" : followedOnly ? "🔔" : "☀";
+  const emptyTitle = savedOnly
+    ? "Keep useful updates close."
+    : followedOnly
+      ? "Nothing you're following here."
+      : "A little breathing room.";
+  const emptyHint = savedOnly
+    ? "Open any report and save it to find it here."
+    : followedOnly
+      ? "Follow a report to get notified when neighbors update it."
+      : "No reports match these filters.";
   $("#list").innerHTML = rows.length
     ? rows
         .map((r) => {
           const c = categories[r.category];
-          return `<button class="report-card ${selected === r.id ? "chosen" : ""}" data-id="${r.id}"><div class="card-top"><span class="category-icon" style="--accent:${c.color}">${c.icon}</span><span class="category-label">${c.label}</span>${r.demo ? '<span class="demo">DEMO</span>' : ""}<span class="age">${age(r.updatedAt)}</span></div><h3>${escape(r.title)}</h3><p class="place">${escape(r.location)}</p><div class="card-bottom"><span class="estimate">${r.status === "resolved" ? "✓ Cleared" : `◷ ${escape(r.prediction.label)}`}</span><span>♧ ${r.confirmations} confirmations</span></div></button>`;
+          return `<button class="report-card ${selected === r.id ? "chosen" : ""}" data-id="${r.id}"><div class="card-top"><span class="category-icon" style="--accent:${c.color}">${c.icon}</span><span class="category-label">${c.label}</span>${r.demo ? '<span class="demo">DEMO</span>' : ""}${unseen.has(r.id) ? '<span class="unseen-dot" title="New updates on a report you follow">●</span>' : ""}<span class="age">${age(r.updatedAt)}</span></div><h3>${escape(r.title)}</h3><p class="place">${escape(r.location)}</p><div class="card-bottom"><span class="estimate">${r.status === "resolved" ? "✓ Cleared" : `◷ ${escape(r.prediction.label)}`}</span><span>♧ ${r.confirmations} confirmations</span>${r.commentCount ? `<span>💬 ${r.commentCount}</span>` : ""}${r.photoUrl ? `<span title="Has a photo">📷</span>` : ""}</div></button>`;
         })
         .join("")
-    : `<div class="empty"><span>${savedOnly ? "☆" : "☀"}</span><h3>${savedOnly ? "Keep useful updates close." : "A little breathing room."}</h3><p>${savedOnly ? "Open any report and save it to find it here." : "No reports match these filters."}</p><button id="reset-filters">Reset filters</button></div>`;
+    : `<div class="empty"><span>${emptyIcon}</span><h3>${emptyTitle}</h3><p>${emptyHint}</p><button id="reset-filters">Reset filters</button></div>`;
   markers.clearLayers();
   rows.forEach((r) => {
     const c = categories[r.category];
@@ -148,19 +188,49 @@ function render() {
       .addTo(markers)
       .on("click", () => select(r.id));
   });
-  if (selected) renderDetail();
+  if (selected) {
+    // Rebuilding the detail panel wipes a half-typed neighbor note, so only
+    // re-render it when the underlying report actually changed.
+    const r = reports.find((x) => x.id === selected);
+    const key = r
+      ? `${r.updatedAt}:${r.commentCount || 0}:${r.status}:${r.clearVotes}:${r.confirmations}`
+      : "gone";
+    if (key !== lastDetailKey) {
+      lastDetailKey = key;
+      renderDetail();
+    }
+  }
   $("#updated").textContent = lastUpdated
     ? `Updated ${age(lastUpdated)} · refreshes every 15s`
     : "Connecting…";
 }
 function select(id) {
   selected = id;
+  lastDetailKey = null;
+  if (unseen.delete(id)) writeIdSet(localStorage, "friction-unseen", unseen);
   const r = reports.find((x) => x.id === id);
   const url = new URL(location.href);
   url.searchParams.set("report", id);
   history.replaceState(null, "", url);
   map.flyTo([r.lat, r.lng], 15, { duration: 0.5 });
   render();
+}
+function commentHtml(c) {
+  return `<div class="comment"><div class="comment-meta"><strong>${escape(c.author)}</strong><span>${age(c.createdAt)}</span></div><p>${escape(c.body)}</p></div>`;
+}
+async function loadComments(id) {
+  commentsFor = id;
+  try {
+    const comments = await api(`/reports/${id}/comments`);
+    if (commentsFor !== id || !$("#comment-list")) return;
+    $("#comment-list").innerHTML = comments.length
+      ? comments.map(commentHtml).join("")
+      : `<p class="comments-empty">No notes yet. Passed by here? Leave one for the next person.</p>`;
+  } catch {
+    if (commentsFor === id && $("#comment-list"))
+      $("#comment-list").innerHTML =
+        `<p class="comments-empty">Could not load notes.</p>`;
+  }
 }
 function renderDetail() {
   const r = reports.find((x) => x.id === selected);
@@ -171,16 +241,32 @@ function renderDetail() {
   const c = categories[r.category];
   $("#detail").hidden = false;
   $("#detail").innerHTML =
-    `<button class="close" id="close-detail" aria-label="Close report details">×</button><div class="eyebrow" style="color:${c.color}">${c.label}${r.demo ? " · FICTIONAL DEMO" : ""}</div><h2>${escape(r.title)}</h2><p class="place">${escape(r.location)}</p><p>${escape(r.description)}</p><div class="prediction"><span>Estimated time to clear<strong>${r.status === "resolved" ? "Cleared" : escape(r.prediction.label)}</strong></span><span class="confidence">${r.prediction.confidence} confidence</span></div><p class="detail-note">Category-based estimate · ${r.confirmations} confirmations · ${r.clearVotes}/2 clearance votes</p>${r.status === "active" ? '<div class="detail-actions"><button class="primary" data-vote="confirm">Still here +1</button><button data-vote="clear">✓ Looks clear</button></div>' : "<p>✓ The community marked this cleared.</p>"}`;
+    `<button class="close" id="close-detail" aria-label="Close report details">×</button><div class="eyebrow" style="color:${c.color}">${c.label}${r.demo ? " · FICTIONAL DEMO" : ""}</div><h2>${escape(r.title)}</h2><p class="place">${escape(r.location)}</p>${r.photoUrl ? `<a class="report-photo" href="${escape(r.photoUrl)}" target="_blank" rel="noopener noreferrer"><img src="${escape(r.photoUrl)}" alt="Photo attached to this report" loading="lazy" referrerpolicy="no-referrer" onerror="this.closest('.report-photo').remove()"></a>` : ""}<p>${escape(r.description)}</p><div class="prediction"><span>Estimated time to clear<strong>${r.status === "resolved" ? "Cleared" : escape(r.prediction.label)}</strong></span><span class="confidence">${r.prediction.confidence} confidence</span></div><p class="detail-note">Category-based estimate · ${r.confirmations} confirmations · ${r.clearVotes}/2 clearance votes</p>${r.status === "active" ? '<div class="detail-actions"><button class="primary" data-vote="confirm">Still here +1</button><button data-vote="clear">✓ Looks clear</button></div>' : "<p>✓ The community marked this cleared.</p>"}`;
   $("#detail").insertAdjacentHTML(
     "beforeend",
-    `<div class="report-tools"><button id="save-report" aria-pressed="${saved.has(r.id)}">${saved.has(r.id) ? "★ Saved" : "☆ Save report"}</button><button id="share-report">Copy report link ↗</button></div><div class="impact-line">${["", "Minor inconvenience", "Moderate impact", "Major obstacle"][r.severity]} · First reported ${age(r.createdAt)}</div>`,
+    `<div class="report-tools"><button id="save-report" aria-pressed="${saved.has(r.id)}">${saved.has(r.id) ? "★ Saved" : "☆ Save report"}</button><button id="follow-report" aria-pressed="${followed.has(r.id)}">${followed.has(r.id) ? "🔔 Following" : "🔔 Follow updates"}</button><button id="share-report">Copy report link ↗</button></div><div class="impact-line">${["", "Minor inconvenience", "Moderate impact", "Major obstacle"][r.severity]} · First reported ${age(r.createdAt)}</div><div class="comments"><h3>Neighbor notes</h3><div id="comment-list"><p class="comments-empty">Loading notes…</p></div><form id="comment-form"><input name="note" maxlength="300" placeholder="Add a useful note for neighbors…" aria-label="Add a neighbor note" autocomplete="off"><button type="submit">Post</button></form><p id="comment-error" role="alert"></p></div>`,
   );
+  loadComments(r.id);
 }
 async function refresh() {
   try {
-    reports = await api("/reports");
+    const next = await api("/reports");
+    const updates = detectUpdates(next, followed, seen);
+    reports = next;
     lastUpdated = Date.now();
+    if (updates.length) {
+      for (const u of updates) unseen.add(u.id);
+      writeIdSet(localStorage, "friction-unseen", unseen);
+      const preview = updates
+        .slice(0, 2)
+        .map((u) => `“${u.title}”: ${u.changes.join(", ")}`)
+        .join(" · ");
+      toast(
+        `🔔 ${updates.length === 1 ? "An update" : `${updates.length} updates`} on followed reports — ${preview}${updates.length > 2 ? "…" : ""}`,
+      );
+    }
+    seen = snapshotReports(next);
+    writeSnapshot(localStorage, seen);
     if (initialReport) {
       const target = reports.find((r) => r.id === initialReport);
       initialReport = null;
@@ -214,6 +300,7 @@ $("#filters").addEventListener("click", (e) => {
     .querySelectorAll(".chip")
     .forEach((b) => b.classList.toggle("active", b === button));
   selected = null;
+  lastDetailKey = null;
   $("#detail").hidden = true;
   render();
 });
@@ -223,10 +310,15 @@ function resetFilters() {
   majorOnly = false;
   hideDemo = false;
   savedOnly = false;
+  followedOnly = false;
+  selected = null;
+  lastDetailKey = null;
+  $("#detail").hidden = true;
   $("#search").value = "";
   $("#major-only").checked = false;
   $("#hide-demo").checked = false;
   $("#saved-toggle").setAttribute("aria-pressed", "false");
+  $("#followed-toggle").setAttribute("aria-pressed", "false");
   document
     .querySelectorAll(".chip")
     .forEach((b) => b.classList.toggle("active", b.dataset.category === "all"));
@@ -236,6 +328,27 @@ $("#saved-toggle").onclick = () => {
   savedOnly = !savedOnly;
   $("#saved-toggle").setAttribute("aria-pressed", String(savedOnly));
   render();
+};
+$("#followed-toggle").onclick = () => {
+  followedOnly = !followedOnly;
+  $("#followed-toggle").setAttribute("aria-pressed", String(followedOnly));
+  render();
+};
+$("#export-csv").onclick = () => {
+  const rows = visible();
+  if (!rows.length) return toast("Nothing to export with these filters.");
+  const blob = new Blob([toCSV(rows)], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `city-friction-${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+  toast(
+    `Exported ${rows.length} report${rows.length === 1 ? "" : "s"} to CSV.`,
+  );
 };
 $("#major-only").onchange = (e) => {
   majorOnly = e.target.checked;
@@ -260,6 +373,7 @@ for (const [selector, value] of [
   $(selector).onclick = () => {
     status = value;
     selected = null;
+    lastDetailKey = null;
     $("#detail").hidden = true;
     $("#active-tab").classList.toggle("selected", value === "active");
     $("#resolved-tab").classList.toggle("selected", value === "resolved");
@@ -287,8 +401,28 @@ $("#detail").onclick = async (e) => {
     }
     return;
   }
+  if (e.target.closest("#follow-report")) {
+    const r = reports.find((x) => x.id === selected);
+    if (followed.has(selected)) {
+      followed.delete(selected);
+      delete seen[selected];
+      toast("Unfollowed. You won't get updates on this report.");
+    } else {
+      followed.add(selected);
+      seen[selected] = snapshotReports(r ? [r] : [])[selected];
+      toast(
+        "Following. We'll flag new confirmations, notes, and clearance votes.",
+      );
+    }
+    writeIdSet(localStorage, "friction-followed", followed);
+    writeSnapshot(localStorage, seen);
+    lastDetailKey = null;
+    render();
+    return;
+  }
   if (e.target.closest("#close-detail")) {
     selected = null;
+    lastDetailKey = null;
     const url = new URL(location.href);
     url.searchParams.delete("report");
     history.replaceState(null, "", url);
@@ -312,6 +446,41 @@ $("#detail").onclick = async (e) => {
     b.disabled = false;
   }
 };
+$("#detail").addEventListener("submit", async (e) => {
+  if (e.target.id !== "comment-form") return;
+  e.preventDefault();
+  const input = e.target.elements.note;
+  const button = e.target.querySelector("button");
+  const text = input.value.trim();
+  if (!text || !selected) return;
+  button.disabled = true;
+  $("#comment-error").textContent = "";
+  try {
+    const comment = await api(`/reports/${selected}/comments`, {
+      body: text,
+    });
+    input.value = "";
+    const list = $("#comment-list");
+    if (list) {
+      const empty = list.querySelector(".comments-empty");
+      if (empty) empty.remove();
+      list.insertAdjacentHTML("beforeend", commentHtml(comment));
+    }
+    const r = reports.find((x) => x.id === selected);
+    if (r) {
+      r.commentCount = (r.commentCount || 0) + 1;
+      seen = snapshotReports(reports);
+      writeSnapshot(localStorage, seen);
+      lastDetailKey = null;
+      render();
+    }
+    toast("Note posted. Thanks for the heads-up.");
+  } catch (error) {
+    $("#comment-error").textContent = error.message;
+  } finally {
+    button.disabled = false;
+  }
+});
 function openReport() {
   const form = $("#report-form");
   form.elements.lat.value = chosen.lat.toFixed(6);

@@ -1,9 +1,11 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  anonymize,
   distance,
   findDuplicate,
   prediction,
+  validateComment,
   validateReport,
 } from "../server/domain.js";
 import { createStore } from "../server/store.js";
@@ -40,6 +42,29 @@ test("invalid coordinates and unrecognized categories are rejected", () => {
     { title: "x" },
   ])
     assert.throws(() => validateReport({ ...report, ...change }));
+});
+test("photo URLs are optional but must be valid http(s) links", () => {
+  assert.equal(
+    validateReport({ ...report, photoUrl: "https://example.com/a.jpg" })
+      .photoUrl,
+    "https://example.com/a.jpg",
+  );
+  assert.equal(validateReport({ ...report, photoUrl: "" }).photoUrl, "");
+  assert.equal(validateReport(report).photoUrl, "");
+  for (const photoUrl of [
+    "ftp://example.com/a.jpg",
+    "not a url",
+    "https://" + "a".repeat(500),
+    42,
+  ])
+    assert.throws(() => validateReport({ ...report, photoUrl }), /photo/i);
+});
+test("comments need 1 to 300 characters and authors stay anonymous", () => {
+  assert.equal(validateComment({ body: "  still here  " }), "still here");
+  for (const body of ["", "   ", "x".repeat(301), {}, null, 42])
+    assert.throws(() => validateComment({ body }));
+  assert.match(anonymize("visitor-abc-123"), /^Neighbor [a-zA-Z0-9]{1,6}$/);
+  assert.ok(!anonymize("visitor-abc-123").includes("visitor-abc-123"));
 });
 test("stale predictions remain unknown rather than resolved", () => {
   assert.equal(prediction({ ...report, updatedAt: 0 }).minutes, null);

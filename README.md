@@ -18,6 +18,8 @@ Spot long queues, blocked sidewalks, noisy roadwork, empty bike docks, closed re
 | Search places and report text             | Merge nearby duplicate reports         | Open an issue from a shareable link           |
 | Filter major obstacles or hide demo data  | Confirm an obstacle or vote it cleared | View active, major, stale, and cleared counts |
 | Sort by recency, impact, or confirmations | Two clearance votes resolve an issue   | See explainable clearance ranges              |
+| Follow reports for update notifications   | Leave neighbor notes on any report     | Export the filtered list as CSV               |
+| Filter to followed reports only           | Attach an optional photo URL           | See comment and photo badges on cards         |
 
 Reports persist in SQLite and refresh across browsers every 15 seconds. The responsive interface supports desktop and mobile.
 

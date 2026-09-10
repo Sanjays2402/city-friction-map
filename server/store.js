@@ -1,11 +1,17 @@
 import { DatabaseSync } from "node:sqlite";
 import { randomUUID } from "node:crypto";
-import { findDuplicate, prediction, validateReport } from "./domain.js";
+import {
+  anonymize,
+  findDuplicate,
+  prediction,
+  validateComment,
+  validateReport,
+} from "./domain.js";
 import { InputError } from "./errors.js";
 export function createStore(path = ":memory:", seed = true) {
   const db = new DatabaseSync(path);
   db.exec(
-    `PRAGMA journal_mode=WAL; CREATE TABLE IF NOT EXISTS reports (id TEXT PRIMARY KEY, payload TEXT NOT NULL); CREATE TABLE IF NOT EXISTS votes (report_id TEXT, visitor TEXT, action TEXT, PRIMARY KEY(report_id,visitor,action));`,
+    `PRAGMA journal_mode=WAL; CREATE TABLE IF NOT EXISTS reports (id TEXT PRIMARY KEY, payload TEXT NOT NULL); CREATE TABLE IF NOT EXISTS votes (report_id TEXT, visitor TEXT, action TEXT, PRIMARY KEY(report_id,visitor,action)); CREATE TABLE IF NOT EXISTS comments (id TEXT PRIMARY KEY, report_id TEXT NOT NULL, visitor TEXT NOT NULL, body TEXT NOT NULL, created_at INTEGER NOT NULL); CREATE INDEX IF NOT EXISTS idx_comments_report ON comments(report_id);`,
   );
   const all = () =>
     db
@@ -16,6 +22,22 @@ export function createStore(path = ":memory:", seed = true) {
     db
       .prepare("INSERT OR REPLACE INTO reports VALUES (?,?)")
       .run(r.id, JSON.stringify(r));
+  const commentCounts = () => {
+    const counts = {};
+    for (const row of db
+      .prepare(
+        "SELECT report_id, COUNT(*) AS c FROM comments GROUP BY report_id",
+      )
+      .all())
+      counts[row.report_id] = row.c;
+    return counts;
+  };
+  const toComment = (row) => ({
+    id: row.id,
+    body: row.body,
+    createdAt: row.created_at,
+    author: anonymize(row.visitor),
+  });
   const transaction = (operation) => {
     db.exec("BEGIN IMMEDIATE");
     try {
@@ -160,10 +182,16 @@ export function createStore(path = ":memory:", seed = true) {
     );
   }
   return {
-    list: () =>
-      all()
+    list: () => {
+      const counts = commentCounts();
+      return all()
         .sort((a, b) => b.updatedAt - a.updatedAt)
-        .map((r) => ({ ...r, prediction: prediction(r) })),
+        .map((r) => ({
+          ...r,
+          commentCount: counts[r.id] || 0,
+          prediction: prediction(r),
+        }));
+    },
     create(body, visitor) {
       const input = validateReport(body),
         duplicate = findDuplicate(all(), input);
@@ -182,6 +210,7 @@ export function createStore(path = ":memory:", seed = true) {
             "title",
             "location",
             "description",
+            "photoUrl",
             "lat",
             "lng",
             "severity",
@@ -203,7 +232,7 @@ export function createStore(path = ":memory:", seed = true) {
         );
       });
       return {
-        report: { ...report, prediction: prediction(report) },
+        report: { ...report, commentCount: 0, prediction: prediction(report) },
         merged: false,
       };
     },
@@ -231,7 +260,42 @@ export function createStore(path = ":memory:", seed = true) {
           }
         }
         save(r);
-        return { ...r, prediction: prediction(r) };
+        const commentCount = db
+          .prepare("SELECT COUNT(*) AS c FROM comments WHERE report_id=?")
+          .get(r.id).c;
+        return { ...r, commentCount, prediction: prediction(r) };
+      });
+    },
+    listComments(reportId) {
+      if (!all().some((r) => r.id === reportId))
+        throw new InputError("Report not found.", 404);
+      return db
+        .prepare(
+          "SELECT id, body, visitor, created_at FROM comments WHERE report_id=? ORDER BY created_at ASC",
+        )
+        .all(reportId)
+        .map(toComment);
+    },
+    addComment(reportId, visitor, body) {
+      const text = validateComment(body);
+      return transaction(() => {
+        if (!all().some((r) => r.id === reportId))
+          throw new InputError("Report not found.", 404);
+        const row = {
+          id: randomUUID(),
+          report_id: reportId,
+          visitor,
+          body: text,
+          created_at: Date.now(),
+        };
+        db.prepare("INSERT INTO comments VALUES (?,?,?,?,?)").run(
+          row.id,
+          row.report_id,
+          row.visitor,
+          row.body,
+          row.created_at,
+        );
+        return toComment(row);
       });
     },
     close: () => db.close(),

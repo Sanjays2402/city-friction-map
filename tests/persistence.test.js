@@ -31,6 +31,30 @@ test("reports and vote uniqueness survive closing and reopening the database", (
   }
 });
 
+test("comments and photo URLs survive closing and reopening the database", () => {
+  const directory = mkdtempSync(join(tmpdir(), "friction-comments-"));
+  const path = join(directory, "test.sqlite");
+  let store = createStore(path, false);
+  try {
+    const { report: saved } = store.create(
+      { ...report, photoUrl: "https://example.com/p.jpg" },
+      "visitor",
+    );
+    store.addComment(saved.id, "commenter", { body: "Still busy" });
+    store.close();
+    store = createStore(path, false);
+    const [reopened] = store.list();
+    assert.equal(reopened.photoUrl, "https://example.com/p.jpg");
+    assert.equal(reopened.commentCount, 1);
+    const [comment] = store.listComments(reopened.id);
+    assert.equal(comment.body, "Still busy");
+    assert.match(comment.author, /^Neighbor /);
+  } finally {
+    store.close();
+    rmSync(directory, { recursive: true });
+  }
+});
+
 test("a failed report update rolls back its vote so retrying is safe", () => {
   const directory = mkdtempSync(join(tmpdir(), "friction-atomic-"));
   const path = join(directory, "test.sqlite");

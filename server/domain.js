@@ -47,12 +47,38 @@ export function validateReport(body) {
     throw new InputError("Choose a location within San Francisco.");
   if (![1, 2, 3].includes(body.severity))
     throw new InputError("Choose a valid impact level.");
+  let photoUrl = "";
+  if (body.photoUrl !== undefined && body.photoUrl !== null) {
+    if (typeof body.photoUrl !== "string")
+      throw new InputError("The photo must be a URL.");
+    const trimmed = body.photoUrl.trim();
+    if (trimmed) {
+      if (trimmed.length > 500 || !/^https?:\/\/[^\s]+$/i.test(trimmed))
+        throw new InputError(
+          "The photo must be an http(s) URL under 500 characters.",
+        );
+      photoUrl = trimmed;
+    }
+  }
   return {
     ...body,
     title: body.title.trim(),
     location: body.location.trim(),
     description: body.description.trim(),
+    photoUrl,
   };
+}
+export function validateComment(body) {
+  const text = body && typeof body.body === "string" ? body.body.trim() : "";
+  if (text.length < 1 || text.length > 300)
+    throw new InputError("Write a note between 1 and 300 characters.");
+  return text;
+}
+export function anonymize(visitor) {
+  const clean = String(visitor)
+    .replace(/[^a-zA-Z0-9]/g, "")
+    .slice(0, 6);
+  return `Neighbor ${clean || "anon"}`;
 }
 export function findDuplicate(reports, incoming, now = Date.now()) {
   return reports

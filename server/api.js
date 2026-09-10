@@ -48,6 +48,14 @@ export function createApi(store) {
       store.vote(req.params.id, req.get("x-visitor-id"), req.body?.action),
     );
   });
+  api.get("/reports/:id/comments", (req, res) => {
+    res.json(store.listComments(req.params.id));
+  });
+  api.post("/reports/:id/comments", (req, res) => {
+    res
+      .status(201)
+      .json(store.addComment(req.params.id, req.get("x-visitor-id"), req.body));
+  });
   api.use((_, res) =>
     res.status(404).json({ error: "API endpoint not found." }),
   );
@@ -62,14 +70,12 @@ export function createApi(store) {
         .json({ error: "Request body must be valid JSON." });
     const status = err.status || 500;
     if (status === 500) console.error("API request failed:", err);
-    res
-      .status(status)
-      .json({
-        error:
-          status === 500
-            ? "Could not save this update. Please try again."
-            : err.message,
-      });
+    res.status(status).json({
+      error:
+        status === 500
+          ? "Could not save this update. Please try again."
+          : err.message,
+    });
   });
   return api;
 }

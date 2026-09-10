@@ -6,8 +6,8 @@ The browser loads a Vite bundle and requests reports from Express. Leaflet displ
 
 | Location           | Responsibility                                                |
 | ------------------ | ------------------------------------------------------------- |
-| `src/main.js`      | Map, report form, URL selection, saved reports, and rendering |
-| `src/discovery.js` | Pure filtering, sorting, summary, and saved-state parsing     |
+| `src/main.js`      | Map, report form, URL selection, saved reports, following, comments, and rendering |
+| `src/discovery.js` | Pure filtering, sorting, summary, follow-update detection, CSV export, and saved-state parsing |
 | `src/style.css`    | Responsive interface                                          |
 | `server/api.js`    | HTTP validation, status codes, and endpoint routing           |
 | `server/domain.js` | Categories, input rules, geographic distance, and predictions |
@@ -38,16 +38,34 @@ Saved report IDs stay in local storage and survive reloads on that browser. Filt
 
 Selecting a report adds `?report=<id>` to the URL. Opening that URL restores the report and its active or resolved tab. Clipboard sharing copies the URL; if clipboard permission is unavailable, the address bar remains the fallback. A localhost link is usable only by someone who can reach that server.
 
+## Neighbor notes
+
+Reports accept short community notes (1–300 characters) through `POST /api/reports/:id/comments`. Notes persist in a `comments` table with the report id, visitor id, body, and timestamp. Authors are anonymized as `Neighbor <id>`; raw visitor IDs are never returned to clients. Note text is escaped when rendered. Report listings include a `commentCount` so cards can show discussion at a glance.
+
+## Following reports
+
+Following is client-side. Followed report IDs live in local storage (`friction-followed`), alongside a snapshot of each report's last-seen state (`friction-seen`: confirmations, note count, clearance votes, status). On every 15-second refresh, `detectUpdates` compares the snapshot against fresh data and the client toasts a plain-language summary ("2 new confirmations, 1 new neighbor note"). Unseen updates get a dot on the report card until opened. A "Followed" filter narrows the list to followed reports.
+
+## Photo attachments
+
+Reports accept an optional `photoUrl`: an `http(s)` URL under 500 characters, validated server-side. Photos render as a lazy-loaded thumbnail in the report detail with a link to the full image; a 📷 badge marks cards that have one. URLs are escaped like all other report text. There is no image hosting or upload — the project links out, keeping storage and moderation scope unchanged.
+
+## CSV export
+
+The "Export CSV" control downloads the currently filtered report list (respecting category, search, status, impact, demo, saved, and followed filters). `toCSV` in `src/discovery.js` is a pure function covering id, title, location, category, severity, status, confirmations, clearance votes, note count, coordinates, and timestamps, with RFC 4180 quoting.
+
 ## API
 
 | Method | Endpoint                | Behavior                       |
 | ------ | ----------------------- | ------------------------------ |
 | GET    | `/api/health`           | Health check                   |
-| GET    | `/api/reports`          | Reports with derived estimates |
-| POST   | `/api/reports`          | Create (201) or merge (200)    |
-| POST   | `/api/reports/:id/vote` | Confirm or submit clearance    |
+| GET    | `/api/reports`          | Reports with derived estimates and note counts |
+| POST   | `/api/reports`          | Create (201) or merge (200)                    |
+| POST   | `/api/reports/:id/vote` | Confirm or submit clearance                    |
+| GET    | `/api/reports/:id/comments`  | Notes for a report, oldest first          |
+| POST   | `/api/reports/:id/comments`  | Add a note (201)                          |
 
-Writes require JSON and an `X-Visitor-Id` header containing 12–80 letters, numbers, or hyphens. Report fields are `category`, `title`, `location`, `description`, `lat`, `lng`, and `severity` (1–3). Vote bodies use `{"action":"confirm"}` or `{"action":"clear"}`.
+Writes require JSON and an `X-Visitor-Id` header containing 12–80 letters, numbers, or hyphens. Report fields are `category`, `title`, `location`, `description`, `photoUrl` (optional), `lat`, `lng`, and `severity` (1–3). Vote bodies use `{"action":"confirm"}` or `{"action":"clear"}`. Note bodies use `{"body":"…"}` (1–300 characters).
 
 Errors distinguish invalid input (400), forbidden origins (403), missing reports (404), conflicts (409), oversized bodies (413), unsupported content types (415), and unexpected failures (500). Body size is limited to 8 KB. SQL values are parameterized, rendered report text is escaped, and storage internals are not returned to clients.
 
