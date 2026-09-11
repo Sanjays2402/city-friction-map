@@ -2,6 +2,18 @@
 // Category labels come from server/domain.js and are intentionally not
 // duplicated here.
 const en = {
+  focus: {
+    area: "This map area only",
+    age: "Updated",
+    all: "Any time",
+    hour: "Last hour",
+    day: "Last 24 hours",
+    week: "Last 7 days",
+    fit: "Fit results",
+    city: "City overview",
+    none: "No matching reports to show.",
+    scope: "In this map area",
+  },
   header: {
     brandAria: "City Friction home",
     navExplore: "Explore the city",
@@ -385,6 +397,18 @@ const en = {
 };
 
 const es = {
+  focus: {
+    area: "Solo esta zona del mapa",
+    age: "Actualizado",
+    all: "Cualquier momento",
+    hour: "Última hora",
+    day: "Últimas 24 horas",
+    week: "Últimos 7 días",
+    fit: "Ver resultados",
+    city: "Vista de la ciudad",
+    none: "No hay informes coincidentes.",
+    scope: "En esta zona del mapa",
+  },
   header: {
     brandAria: "Inicio de City Friction",
     navExplore: "Explora la ciudad",

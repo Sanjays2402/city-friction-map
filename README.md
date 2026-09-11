@@ -14,6 +14,8 @@ Live layers pull in real bike-share status, 311 cases, weather, air quality, and
 
 ## Features
 
+**Map focus:** limit reports to the visible map area, filter updates from the last hour/day/week, fit the map to matching reports, or return to the city overview. These filters also apply to exports and the heatmap. Controls support English and Spanish.
+
 | Explore                                   | Contribute                              | Keep track                                    |
 | ----------------------------------------- | --------------------------------------- | --------------------------------------------- |
 | Interactive map with six categories       | Submit a report at a chosen location    | Save reports on your device                   |

@@ -5,6 +5,8 @@ export function filterReports(
   followed = new Set(),
 ) {
   const query = filters.query.toLowerCase().trim();
+  const cutoff =
+    (filters.now ?? Date.now()) - (filters.maxAgeHours || 0) * 3600000;
   const rows = reports.filter(
     (r) =>
       r.status === filters.status &&
@@ -13,6 +15,12 @@ export function filterReports(
       (!filters.hideDemo || !r.demo) &&
       (!filters.savedOnly || saved.has(r.id)) &&
       (!filters.followedOnly || followed.has(r.id)) &&
+      (!filters.maxAgeHours || r.updatedAt >= cutoff) &&
+      (!filters.bounds ||
+        (r.lat >= filters.bounds.south &&
+          r.lat <= filters.bounds.north &&
+          r.lng >= filters.bounds.west &&
+          r.lng <= filters.bounds.east)) &&
       (!r.hidden || filters.includeHidden) &&
       `${r.title} ${r.location} ${r.description}`.toLowerCase().includes(query),
   );

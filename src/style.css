@@ -1,4 +1,29 @@
 @import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap");
+.focus-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  margin: 0 0 16px;
+  font-size: 11px;
+  color: inherit;
+}
+.focus-controls label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.focus-controls input {
+  accent-color: #426b42;
+}
+.focus-controls select {
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: 1px solid #87967b55;
+  padding: 7px;
+  border-radius: 6px;
+}
 :root {
   font-family: "DM Sans", sans-serif;
   color: #253d36;
@@ -2229,5 +2254,28 @@ dialog kbd {
   .notification-panel {
     width: 290px;
     right: -60px;
+  }
+  header {
+    flex-wrap: wrap;
+    height: auto;
+    min-height: 86px;
+    gap: 8px;
+    padding: 12px 5%;
+  }
+  header > * {
+    order: 1;
+  }
+  header .brand,
+  header #report {
+    order: 0;
+  }
+  header .brand {
+    margin-right: auto;
+  }
+  header #report {
+    flex: none;
+  }
+  header #you-chip {
+    max-width: 150px;
   }
 }

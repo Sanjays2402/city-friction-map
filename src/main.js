@@ -81,6 +81,8 @@ let majorOnly = false,
   savedOnly = false,
   followedOnly = false,
   sort = "recent";
+let inViewOnly = false,
+  maxAgeHours = 0;
 const deepLink = location.pathname.match(/^\/r\/([A-Za-z0-9-]+)/);
 let initialReport = deepLink
   ? deepLink[1]
@@ -125,6 +127,30 @@ const map = L.map("map", { zoomControl: false }).setView(
   city.zoom,
 );
 L.control.zoom({ position: "bottomright" }).addTo(map);
+$(".workspace").insertAdjacentHTML(
+  "beforebegin",
+  `<section class="focus-controls" aria-label="Map focus"><label><input id="in-view-only" type="checkbox"> ${t("focus.area")}</label><label>${t("focus.age")} <select id="report-age"><option value="0">${t("focus.all")}</option><option value="1">${t("focus.hour")}</option><option value="24">${t("focus.day")}</option><option value="168">${t("focus.week")}</option></select></label><button id="fit-results" class="preference">⌗ ${t("focus.fit")}</button><button id="city-overview" class="preference">↺ ${t("focus.city")}</button></section>`,
+);
+$("#in-view-only").onchange = (e) => {
+  inViewOnly = e.target.checked;
+  render();
+};
+$("#report-age").onchange = (e) => {
+  maxAgeHours = Number(e.target.value);
+  render();
+};
+$("#fit-results").onclick = () => {
+  const rows = visible();
+  if (!rows.length) return toast(t("focus.none"));
+  map.fitBounds(
+    rows.map((r) => [r.lat, r.lng]),
+    { padding: [40, 40], maxZoom: 16 },
+  );
+};
+$("#city-overview").onclick = () => map.setView(city.center, city.zoom);
+map.on("moveend", () => {
+  if (inViewOnly) render();
+});
 L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
   attribution:
     '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>',
@@ -188,6 +214,15 @@ function visible() {
       savedOnly,
       followedOnly,
       sort,
+      maxAgeHours,
+      bounds: inViewOnly
+        ? {
+            south: map.getBounds().getSouth(),
+            north: map.getBounds().getNorth(),
+            west: map.getBounds().getWest(),
+            east: map.getBounds().getEast(),
+          }
+        : null,
     },
     saved,
     followed,
@@ -208,6 +243,7 @@ function render() {
   $("#count").textContent =
     `${status === "active" ? t("list.countActive", { count: rows.length }) : t("list.countCleared", { count: rows.length })}`;
   const emptyIcon = savedOnly ? "☆" : followedOnly ? "🔔" : "☀";
+  if (inViewOnly) $("#count").textContent += ` · ${t("focus.scope")}`;
   const emptyTitle = savedOnly
     ? t("empty.savedTitle")
     : followedOnly
@@ -222,7 +258,7 @@ function render() {
     ? rows
         .map((r) => {
           const c = categories[r.category];
-          return `<button class="report-card ${selected === r.id ? "chosen" : ""}" data-id="${r.id}"><div class="card-top"><span class="category-icon" style="--accent:${c.color}">${c.icon}</span><span class="category-label">${c.label}</span>${r.demo ? '`<span class="demo">${t("card.demo")}</span>`' : ""}${unseen.has(r.id) ? `<span class="unseen-dot" title="${t("card.newUpdates")}">●</span>` : ""}<span class="age">${age(r.updatedAt)}</span></div><h3>${escape(r.title)}</h3><p class="place">${escape(r.location)}</p><div class="card-bottom"><span class="estimate">${r.status === "resolved" ? t("card.cleared") : `◷ ${escape(r.prediction.label)}`}</span><span>♧ ${t("card.confirmations", { n: r.confirmations })}</span>${r.commentCount ? `<span>💬 ${r.commentCount}</span>` : ""}${r.photoUrl ? `<span title="${t("card.photoTitle")}">📷</span>` : ""}</div></button>`;
+          return `<button class="report-card ${selected === r.id ? "chosen" : ""}" data-id="${r.id}"><div class="card-top"><span class="category-icon" style="--accent:${c.color}">${c.icon}</span><span class="category-label">${c.label}</span>${r.demo ? `<span class="demo">${t("card.demo")}</span>` : ""}${unseen.has(r.id) ? `<span class="unseen-dot" title="${t("card.newUpdates")}">●</span>` : ""}<span class="age">${age(r.updatedAt)}</span></div><h3>${escape(r.title)}</h3><p class="place">${escape(r.location)}</p><div class="card-bottom"><span class="estimate">${r.status === "resolved" ? t("card.cleared") : `◷ ${escape(r.prediction.label)}`}</span><span>♧ ${t("card.confirmations", { n: r.confirmations })}</span>${r.commentCount ? `<span>💬 ${r.commentCount}</span>` : ""}${r.photoUrl ? `<span title="${t("card.photoTitle")}">📷</span>` : ""}</div></button>`;
         })
         .join("")
     : `<div class="empty"><span>${emptyIcon}</span><h3>${emptyTitle}</h3><p>${emptyHint}</p><button id="reset-filters">${t("empty.reset")}</button></div>`;
@@ -535,6 +571,10 @@ $("#filters").addEventListener("click", (e) => {
   render();
 });
 function resetFilters() {
+  inViewOnly = false;
+  maxAgeHours = 0;
+  $("#in-view-only").checked = false;
+  $("#report-age").value = "0";
   category = "all";
   query = "";
   majorOnly = false;
@@ -1471,6 +1511,10 @@ $("#detail").onclick = async (e) => {
     } catch {
       toast(t("toasts.storageUnavailable"));
     }
+    $("#save-report").setAttribute("aria-pressed", String(saved.has(selected)));
+    $("#save-report").textContent = saved.has(selected)
+      ? t("detail.saveOn")
+      : t("detail.saveOff");
     render();
     return;
   }
