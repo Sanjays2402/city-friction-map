@@ -88,6 +88,15 @@ test("HTTP rejects invalid bodies, missing identities and cross-origin writes", 
   assert.equal(
     (await request("/reports", { ...report, description: "a".repeat(9000) }))
       .status,
+    400,
+  );
+  assert.equal(
+    (
+      await request("/reports", {
+        ...report,
+        photo: "data:image/jpeg;base64," + "a".repeat(500 * 1024),
+      })
+    ).status,
     413,
   );
   const malformed = await fetch(base + "/api/reports", {

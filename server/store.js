@@ -18,7 +18,7 @@ import { DEFAULT_CITY } from "./cities.js";
 export function createStore(path = ":memory:", seed = true) {
   const db = new DatabaseSync(path);
   db.exec(
-    `PRAGMA journal_mode=WAL; CREATE TABLE IF NOT EXISTS reports (id TEXT PRIMARY KEY, payload TEXT NOT NULL); CREATE TABLE IF NOT EXISTS votes (report_id TEXT, visitor TEXT, action TEXT, created_at INTEGER, PRIMARY KEY(report_id,visitor,action)); CREATE TABLE IF NOT EXISTS comments (id TEXT PRIMARY KEY, report_id TEXT NOT NULL, visitor TEXT NOT NULL, body TEXT NOT NULL, created_at INTEGER NOT NULL, parent_id TEXT); CREATE INDEX IF NOT EXISTS idx_comments_report ON comments(report_id); CREATE TABLE IF NOT EXISTS flags (report_id TEXT NOT NULL, visitor TEXT NOT NULL, reason TEXT NOT NULL, created_at INTEGER NOT NULL, PRIMARY KEY(report_id,visitor)); CREATE INDEX IF NOT EXISTS idx_flags_report ON flags(report_id); CREATE TABLE IF NOT EXISTS reactions (comment_id TEXT NOT NULL, visitor TEXT NOT NULL, kind TEXT NOT NULL, PRIMARY KEY(comment_id,visitor)); CREATE TABLE IF NOT EXISTS alerts (id TEXT PRIMARY KEY, visitor TEXT NOT NULL, lat REAL NOT NULL, lng REAL NOT NULL, radius_m INTEGER NOT NULL, label TEXT NOT NULL, created_at INTEGER NOT NULL); CREATE INDEX IF NOT EXISTS idx_alerts_visitor ON alerts(visitor); CREATE TABLE IF NOT EXISTS notifications (id TEXT PRIMARY KEY, visitor TEXT NOT NULL, type TEXT NOT NULL, title TEXT NOT NULL, body TEXT NOT NULL, report_id TEXT, city TEXT, created_at INTEGER NOT NULL, read_at INTEGER); CREATE INDEX IF NOT EXISTS idx_notifications_visitor ON notifications(visitor, created_at);`,
+    `PRAGMA journal_mode=WAL; CREATE TABLE IF NOT EXISTS reports (id TEXT PRIMARY KEY, payload TEXT NOT NULL); CREATE TABLE IF NOT EXISTS votes (report_id TEXT, visitor TEXT, action TEXT, created_at INTEGER, PRIMARY KEY(report_id,visitor,action)); CREATE TABLE IF NOT EXISTS comments (id TEXT PRIMARY KEY, report_id TEXT NOT NULL, visitor TEXT NOT NULL, body TEXT NOT NULL, created_at INTEGER NOT NULL, parent_id TEXT); CREATE INDEX IF NOT EXISTS idx_comments_report ON comments(report_id); CREATE TABLE IF NOT EXISTS flags (report_id TEXT NOT NULL, visitor TEXT NOT NULL, reason TEXT NOT NULL, created_at INTEGER NOT NULL, PRIMARY KEY(report_id,visitor)); CREATE INDEX IF NOT EXISTS idx_flags_report ON flags(report_id); CREATE TABLE IF NOT EXISTS reactions (comment_id TEXT NOT NULL, visitor TEXT NOT NULL, kind TEXT NOT NULL, PRIMARY KEY(comment_id,visitor)); CREATE TABLE IF NOT EXISTS kudos (report_id TEXT NOT NULL, visitor TEXT NOT NULL, created_at INTEGER NOT NULL, PRIMARY KEY(report_id,visitor)); CREATE INDEX IF NOT EXISTS idx_kudos_report ON kudos(report_id); CREATE TABLE IF NOT EXISTS alerts (id TEXT PRIMARY KEY, visitor TEXT NOT NULL, lat REAL NOT NULL, lng REAL NOT NULL, radius_m INTEGER NOT NULL, label TEXT NOT NULL, created_at INTEGER NOT NULL); CREATE INDEX IF NOT EXISTS idx_alerts_visitor ON alerts(visitor); CREATE TABLE IF NOT EXISTS notifications (id TEXT PRIMARY KEY, visitor TEXT NOT NULL, type TEXT NOT NULL, title TEXT NOT NULL, body TEXT NOT NULL, report_id TEXT, city TEXT, created_at INTEGER NOT NULL, read_at INTEGER); CREATE INDEX IF NOT EXISTS idx_notifications_visitor ON notifications(visitor, created_at);`,
   );
   // Upgrade path: databases created before threaded replies lack parent_id,
   // and older votes lack created_at (used for streaks and weekly progress).
@@ -78,6 +78,16 @@ export function createStore(path = ":memory:", seed = true) {
       counts[row.report_id] = row.c;
     return counts;
   };
+  const kudosCounts = () => {
+    const counts = {};
+    for (const row of db
+      .prepare("SELECT report_id, COUNT(*) AS c FROM kudos GROUP BY report_id")
+      .all())
+      counts[row.report_id] = row.c;
+    return counts;
+  };
+  const kudosCountFor = (id) =>
+    db.prepare("SELECT COUNT(*) AS c FROM kudos WHERE report_id = ?").get(id).c;
   const toAlert = (row) => ({
     id: row.id,
     lat: row.lat,
@@ -283,6 +293,7 @@ export function createStore(path = ":memory:", seed = true) {
     list: (filter = {}) => {
       const counts = commentCounts();
       const flags = flagCounts();
+      const kudos = kudosCounts();
       const city = filter.city || null;
       return all()
         .filter((r) => !city || (r.city || DEFAULT_CITY) === city)
@@ -293,6 +304,7 @@ export function createStore(path = ":memory:", seed = true) {
           hidden: !!r.hidden,
           flagCount: flags[r.id] || 0,
           commentCount: counts[r.id] || 0,
+          kudosCount: kudos[r.id] || 0,
           prediction: prediction(r),
         }));
     },
@@ -305,6 +317,7 @@ export function createStore(path = ":memory:", seed = true) {
         hidden: !!r.hidden,
         flagCount: flagCountFor(id),
         commentCount: commentCountFor(id),
+        kudosCount: kudosCountFor(id),
         prediction: prediction(r),
       };
     },
@@ -329,6 +342,7 @@ export function createStore(path = ":memory:", seed = true) {
             "location",
             "description",
             "photoUrl",
+            "photo",
             "lat",
             "lng",
             "severity",
@@ -442,7 +456,7 @@ export function createStore(path = ":memory:", seed = true) {
         if (!r) throw new InputError("Report not found.", 404);
         if (action === "delete") {
           db.prepare("DELETE FROM reports WHERE id=?").run(id);
-          for (const table of ["votes", "comments", "flags"])
+          for (const table of ["votes", "comments", "flags", "kudos"])
             db.prepare(`DELETE FROM ${table} WHERE report_id=?`).run(id);
           db.prepare(
             "DELETE FROM reactions WHERE comment_id IN (SELECT id FROM comments WHERE report_id=?)",
@@ -453,6 +467,132 @@ export function createStore(path = ":memory:", seed = true) {
         save(r);
         return { id, hidden: r.hidden, flagCount: flagCountFor(id) };
       });
+    },
+    // Reports carrying flags, newest first — the moderation queue.
+    flaggedReports() {
+      const rows = db
+        .prepare(
+          "SELECT report_id, reason, COUNT(*) AS c, MAX(created_at) AS last FROM flags GROUP BY report_id, reason",
+        )
+        .all();
+      const byReport = {};
+      for (const row of rows) {
+        (byReport[row.report_id] ||= { reasons: {}, lastFlagAt: 0 }).reasons[
+          row.reason
+        ] = row.c;
+        byReport[row.report_id].lastFlagAt = Math.max(
+          byReport[row.report_id].lastFlagAt,
+          row.last,
+        );
+      }
+      return Object.entries(byReport)
+        .map(([id, info]) => {
+          const r = all().find((r) => r.id === id);
+          if (!r) return null;
+          return {
+            ...this.get(id),
+            flagReasons: info.reasons,
+            lastFlagAt: info.lastFlagAt,
+          };
+        })
+        .filter(Boolean)
+        .sort((a, b) => b.lastFlagAt - a.lastFlagAt);
+    },
+    // "Is this already reported?" preview for the report form. Uses the same
+    // duplicate heuristics as create(), but returns a ranked candidate list
+    // instead of merging.
+    similar({ lat, lng, category, city }) {
+      if (
+        !Number.isFinite(lat) ||
+        !Number.isFinite(lng) ||
+        !Object.hasOwn(categories, category)
+      )
+        throw new InputError("Send lat, lng, and a valid category.");
+      const incoming = { lat, lng, category, title: "" };
+      const now = Date.now();
+      return all()
+        .filter((r) => {
+          if (r.status !== "active" || r.hidden) return false;
+          if (r.category !== category) return false;
+          if (city && (r.city || DEFAULT_CITY) !== city) return false;
+          if (now - r.updatedAt >= 90 * 60000) return false;
+          return distance(r, incoming) <= 400;
+        })
+        .map((r) => ({
+          id: r.id,
+          title: r.title,
+          location: r.location,
+          category: r.category,
+          severity: r.severity,
+          confirmations: r.confirmations,
+          updatedAt: r.updatedAt,
+          distanceM: Math.round(distance(r, incoming)),
+        }))
+        .sort((a, b) => a.distanceM - b.distanceM)
+        .slice(0, 5);
+    },
+    toggleKudos(reportId, visitor) {
+      return transaction(() => {
+        const r = all().find((r) => r.id === reportId);
+        if (!r) throw new InputError("Report not found.", 404);
+        if (r.hidden)
+          throw new InputError(
+            "This report is hidden while under review.",
+            409,
+          );
+        const existing = db
+          .prepare("SELECT 1 FROM kudos WHERE report_id=? AND visitor=?")
+          .get(reportId, visitor);
+        let kudoed;
+        if (existing) {
+          db.prepare("DELETE FROM kudos WHERE report_id=? AND visitor=?").run(
+            reportId,
+            visitor,
+          );
+          kudoed = false;
+        } else {
+          db.prepare("INSERT INTO kudos VALUES (?,?,?)").run(
+            reportId,
+            visitor,
+            Date.now(),
+          );
+          kudoed = true;
+          if (r.creator && r.creator !== visitor)
+            notify(r.creator, {
+              type: "kudos",
+              title: "Someone thanked you",
+              body: `${anonymize(visitor)} sent thanks for “${r.title}”`,
+              reportId: r.id,
+              city: r.city || DEFAULT_CITY,
+            });
+        }
+        return { id: reportId, kudoed, kudosCount: kudosCountFor(reportId) };
+      });
+    },
+    hasKudoed(reportId, visitor) {
+      return !!db
+        .prepare("SELECT 1 FROM kudos WHERE report_id=? AND visitor=?")
+        .get(reportId, visitor);
+    },
+    kudosBy(visitor) {
+      return db
+        .prepare("SELECT report_id, created_at FROM kudos WHERE visitor=?")
+        .all(visitor);
+    },
+    kudosReceivedBy(visitor) {
+      const mine = new Set(
+        all()
+          .filter((r) => r.creator === visitor)
+          .map((r) => r.id),
+      );
+      let total = 0;
+      for (const row of db
+        .prepare(
+          "SELECT report_id, COUNT(*) AS c FROM kudos GROUP BY report_id",
+        )
+        .all())
+        if (mine.has(row.report_id)) total += row.c;
+      return total;
     },
     listComments(reportId) {
       if (!all().some((r) => r.id === reportId))

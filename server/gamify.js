@@ -7,6 +7,7 @@ export const XP = {
   note: 5,
   helpful: 2,
   validatedFlag: 4,
+  kudos: 1,
 };
 
 export const LEVELS = [
@@ -87,13 +88,17 @@ export function computeProfile(store, visitorId, now = Date.now()) {
     0,
   );
   const validatedFlags = flags.filter((f) => hiddenIds.has(f.reportId)).length;
+  const kudosReceived = store.kudosReceivedBy
+    ? store.kudosReceivedBy(visitorId)
+    : 0;
 
   const xp =
     reports.length * XP.report +
     confirms.length * XP.confirm +
     notes.length * XP.note +
     helpfulReceived * XP.helpful +
-    validatedFlags * XP.validatedFlag;
+    validatedFlags * XP.validatedFlag +
+    kudosReceived * XP.kudos;
   const level = levelFor(xp);
 
   const contributions = [
@@ -199,6 +204,7 @@ export function computeProfile(store, visitorId, now = Date.now()) {
       notes: notes.length,
       helpfulReceived,
       validatedFlags,
+      kudosReceived,
     },
   };
 }

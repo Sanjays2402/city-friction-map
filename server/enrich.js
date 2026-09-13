@@ -182,7 +182,10 @@ export function createEnrichRouter(options = {}) {
           getJson(city.bikeshare.info, signal),
           getJson(city.bikeshare.status, signal),
         ]);
-        return { ...projectBikeshare(city, info, status), name: city.bikeshare.name };
+        return {
+          ...projectBikeshare(city, info, status),
+          name: city.bikeshare.name,
+        };
       }),
     );
   });

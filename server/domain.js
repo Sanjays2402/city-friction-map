@@ -61,6 +61,25 @@ export function validateReport(body) {
       photoUrl = trimmed;
     }
   }
+  // Inline photo attachments: small client-compressed data URLs stored with
+  // the report so reports carry their own evidence without a file host.
+  let photo = "";
+  if (body.photo !== undefined && body.photo !== null) {
+    if (typeof body.photo !== "string")
+      throw new InputError("The photo attachment must be a data URL.");
+    const trimmed = body.photo.trim();
+    if (trimmed) {
+      if (trimmed.length > 350 * 1024)
+        throw new InputError(
+          "The photo attachment is too large (350 KB maximum).",
+        );
+      if (!/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(trimmed))
+        throw new InputError(
+          "The photo attachment must be a JPEG, PNG, or WebP data URL.",
+        );
+      photo = trimmed;
+    }
+  }
   return {
     ...body,
     city: city.id,
@@ -68,6 +87,7 @@ export function validateReport(body) {
     location: body.location.trim(),
     description: body.description.trim(),
     photoUrl,
+    photo,
   };
 }
 export function validateComment(body) {

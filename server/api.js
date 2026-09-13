@@ -11,7 +11,7 @@ export function createApi(store, options = {}) {
     res.set("Cache-Control", "no-store");
     next();
   });
-  api.use(express.json({ limit: "8kb" }));
+  api.use(express.json({ limit: "400kb" }));
   const { windowMs = 15 * 60 * 1000, limit = 60 } = options.writeLimit || {};
   const writeLimit = rateLimit({
     windowMs,
@@ -80,6 +80,14 @@ export function createApi(store, options = {}) {
     return city ? { city } : {};
   };
   api.get("/reports", (req, res) => res.json(store.list(cityFilter(req))));
+  api.get("/reports/similar", (req, res) => {
+    const lat = Number(req.query.lat),
+      lng = Number(req.query.lng);
+    const city = req.query.city;
+    if (city !== undefined && !cityById(city))
+      throw Object.assign(new Error("Unknown city."), { status: 400 });
+    res.json(store.similar({ lat, lng, category: req.query.category, city }));
+  });
   api.get("/reports/:id", (req, res) => {
     res.json(store.get(req.params.id));
   });
@@ -97,8 +105,14 @@ export function createApi(store, options = {}) {
       store.flag(req.params.id, req.get("x-visitor-id"), req.body?.reason),
     );
   });
+  api.post("/reports/:id/kudos", (req, res) => {
+    res.json(store.toggleKudos(req.params.id, req.get("x-visitor-id")));
+  });
   api.post("/reports/:id/moderate", requireAdmin, (req, res) => {
     res.json(store.moderate(req.params.id, req.body?.action));
+  });
+  api.get("/moderation/flags", requireAdmin, (req, res) => {
+    res.json(store.flaggedReports());
   });
   api.get("/reports/:id/comments", (req, res) => {
     res.json(store.listComments(req.params.id));
@@ -142,6 +156,42 @@ export function createApi(store, options = {}) {
       return res.status(400).json({ error: "A valid visitor ID is required." });
     res.json(computeProfile(store, visitorId));
   });
+  // Public RSS feed of recent reports per city, for feed readers and
+  // neighborhood blogs. No visitor id needed.
+  api.get("/feed.xml", (req, res) => {
+    const filter = cityFilter(req);
+    const cityName = filter.city ? cityById(filter.city).name : "All cities";
+    const items = store
+      .list(filter)
+      .filter((r) => !r.hidden && r.status === "active")
+      .slice(0, 20);
+    const esc = (s) =>
+      String(s ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+    const host = req.get("host") || "";
+    const itemXml = items
+      .map(
+        (r) =>
+          `<item><title>${esc(r.title)}</title>` +
+          `<link>https://${esc(host)}/r/${esc(r.id)}</link>` +
+          `<guid>https://${esc(host)}/r/${esc(r.id)}</guid>` +
+          `<description>${esc(r.location)} — ${esc(r.description || "").slice(0, 200)}</description>` +
+          `<pubDate>${new Date(r.createdAt).toUTCString()}</pubDate></item>`,
+      )
+      .join("");
+    res
+      .set("Content-Type", "application/rss+xml; charset=utf-8")
+      .send(
+        `<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel>` +
+          `<title>City Friction — ${esc(cityName)}</title>` +
+          `<link>https://${esc(host)}/</link>` +
+          `<description>Recent community friction reports in ${esc(cityName)}.</description>` +
+          itemXml +
+          `</channel></rss>`,
+      );
+  });
   api.use((_, res) =>
     res.status(404).json({ error: "API endpoint not found." }),
   );
@@ -149,7 +199,7 @@ export function createApi(store, options = {}) {
     if (err.type === "entity.too.large")
       return res
         .status(413)
-        .json({ error: "Report exceeds the 8 KB request limit." });
+        .json({ error: "Report exceeds the 400 KB request limit." });
     if (err.type === "entity.parse.failed")
       return res
         .status(400)

@@ -81,8 +81,23 @@ test("computeProfile awards XP and excludes the automatic self-confirm", () => {
     notes: 1,
     helpfulReceived: 2,
     validatedFlags: 0,
+    kudosReceived: 0,
   });
   assert.equal(XP.report, 10);
+});
+
+test("thanks received earn XP and show in counts", () => {
+  const { store, b1 } = seeded();
+  store.toggleKudos(b1, ALICE);
+  store.toggleKudos(b1, CAROL);
+  const p = computeProfile(store, BOB);
+  assert.equal(p.counts.kudosReceived, 2);
+  assert.equal(p.xp, 2 * XP.report + 2 * XP.kudos);
+  // Un-thanking removes the XP again.
+  store.toggleKudos(b1, ALICE);
+  const q = computeProfile(store, BOB);
+  assert.equal(q.counts.kudosReceived, 1);
+  assert.equal(q.xp, 2 * XP.report + XP.kudos);
 });
 
 test("validated flags earn XP once a report is hidden", () => {

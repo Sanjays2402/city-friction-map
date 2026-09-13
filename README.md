@@ -14,8 +14,6 @@ Live layers pull in real bike-share status, 311 cases, weather, air quality, and
 
 ## Features
 
-**Map focus:** limit reports to the visible map area, filter updates from the last hour/day/week, fit the map to matching reports, or return to the city overview. These filters also apply to exports and the heatmap. Controls support English and Spanish.
-
 | Explore                                   | Contribute                              | Keep track                                    |
 | ----------------------------------------- | --------------------------------------- | --------------------------------------------- |
 | Interactive map with six categories       | Submit a report at a chosen location    | Save reports on your device                   |
@@ -23,7 +21,7 @@ Live layers pull in real bike-share status, 311 cases, weather, air quality, and
 | Filter major obstacles or hide demo data  | Confirm an obstacle or vote it cleared  | View active, major, stale, and cleared counts |
 | Sort by recency, impact, or confirmations | Two clearance votes resolve an issue    | See explainable clearance ranges              |
 | Follow reports for update notifications   | Leave neighbor notes on any report      | Export the filtered list as CSV               |
-| Filter to followed reports only           | Attach an optional photo URL            | See comment and photo badges on cards         |
+| Filter to followed reports only           | Attach a compressed photo to a report   | See comment and photo badges on cards         |
 | Flag misleading reports for review        | Smarter duplicate merging by headline   | Community flags hide misleading reports       |
 | React “helpful” on useful neighbor notes  | Reply to neighbor notes (one level)     | Watch areas for new friction with alert zones |
 | See the most active neighbors             |                                         |                                               |
@@ -36,6 +34,10 @@ Live layers pull in real bike-share status, 311 cases, weather, air quality, and
 | Earn XP, levels, badges, and streaks      | Take the weekly confirmation challenge  | See level icons on the leaderboard            |
 | Export reports as GeoJSON                 | Import a GeoJSON FeatureCollection      |                                               |
 | Keyboard shortcuts for power users        | Installable PWA with offline shell      |                                               |
+| **New in v1.6.0**                         |                                         |                                               |
+| Attach compressed photo evidence to reports | Duplicate preview before filing ("already reported?") | Thank reporters with kudos (+1 XP each) |
+| Freshness badges on new reports           | Report activity timelines               | Moderation queue for flagged reports (admin token) |
+| Embeddable `/embed?city=` map for iframes  | Public RSS feed at `/api/feed.xml`       | Print-friendly shared report pages            |
 | **New in v1.5.0**                         |                                         |                                               |
 | Switch between San Francisco, Seattle, and New York | City-scoped reports, alerts, and live data | Notification center with unread badge  |
 | Dark mode with system preference detection | Full Spanish translation                | Offline report queue with automatic sync       |

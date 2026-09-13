@@ -5,4 +5,3 @@ data/
 test-results/
 playwright-report/
 *.log
-preview.sqlite*

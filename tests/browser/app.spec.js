@@ -89,7 +89,7 @@ test("save, reload, share, filter and sort reports", async ({ page }) => {
   );
   await page.locator(".report-card").first().click();
   const shared = page.url();
-  await expect(page).toHaveURL(/\/r\/[A-Za-z0-9-]+$/);
+  await expect(page).toHaveURL(/\?report=/);
   await page.locator("#save-report").click();
   await expect(page.locator("#save-report")).toHaveAttribute(
     "aria-pressed",
