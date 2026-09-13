@@ -2239,6 +2239,9 @@ dialog kbd {
   gap: 10px;
   margin-top: 8px;
 }
+.photo-preview[hidden] {
+  display: none;
+}
 .photo-preview img {
   width: 88px;
   height: 88px;

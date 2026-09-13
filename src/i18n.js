@@ -56,7 +56,7 @@ const en = {
   },
   card: {
     cleared: "✓ Cleared",
-    confirmations: "♧ {count} confirmations",
+    confirmations: "{count} confirmations",
     photoTitle: "Has a photo",
     newUpdates: "New updates on a report you follow",
     demo: "DEMO",
@@ -496,7 +496,7 @@ const es = {
   },
   card: {
     cleared: "✓ Resuelto",
-    confirmations: "♧ {count} confirmaciones",
+    confirmations: "{count} confirmaciones",
     photoTitle: "Tiene foto",
     newUpdates: "Novedades en un reporte que sigues",
     demo: "DEMO",
