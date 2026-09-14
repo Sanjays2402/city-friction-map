@@ -2334,6 +2334,54 @@ dialog kbd {
   border-radius: 4px;
   padding: 2px 6px;
 }
+.expired-badge {
+  background: #8a8a8a;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  border-radius: 4px;
+  padding: 2px 6px;
+}
+.stale-notice {
+  background: #f5f1e6;
+  border: 1px solid #e3d9bd;
+  color: #7a6a3f;
+  font-size: 12.5px;
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin: 10px 0;
+}
+[data-theme="dark"] .stale-notice {
+  background: #2c2a22;
+  border-color: #4a4433;
+  color: #c9bd9a;
+}
+#edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 10px 0;
+  padding: 10px;
+  border: 1px solid #e6e9e2;
+  border-radius: 10px;
+}
+#edit-form h4 {
+  margin: 0;
+  font-size: 13px;
+}
+#edit-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 600;
+}
+#edit-form .form-note {
+  font-size: 12px;
+  color: #7d8a7c;
+  margin: 0;
+}
 .timeline {
   margin-top: 16px;
   border-top: 1px solid #edf0e9;
@@ -2376,7 +2424,43 @@ dialog kbd {
   gap: 10px;
   align-items: flex-start;
 }
-.mod-row > div:first-child {
+.mod-check {
+  margin-top: 4px;
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+}
+.mod-bulk {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 10px;
+  border: 1px dashed #d8cfc0;
+  border-radius: 10px;
+  background: #faf8f3;
+}
+.mod-bulk .mod-merge {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+}
+.mod-bulk input {
+  width: 130px;
+  font-size: 12px;
+  padding: 5px 8px;
+}
+#mod-bulk-error {
+  color: #a03d3d;
+  font-size: 12px;
+  min-height: 16px;
+  margin: 4px 0 0;
+}
+[data-theme="dark"] .mod-bulk {
+  background: #24231e;
+  border-color: #4a4433;
+}
+.mod-row .mod-info {
   min-width: 0;
   display: flex;
   flex-direction: column;

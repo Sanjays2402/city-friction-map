@@ -106,7 +106,7 @@ $("#app").innerHTML = `
       `<button class="chip" data-category="${k}"><span style="color:${c.color}">${c.icon}</span> ${c.label}</button>`,
   )
   .join("")}</div></section>
-<section class="workspace"><aside><div class="list-header"><div><h2>${t("list.title")}</h2><p id="count">${t("list.loading")}</p></div><span class="live">${t("list.live")}</span></div><div class="tabs"><button id="active-tab" class="selected">${t("list.tabNow")}</button><button id="resolved-tab">${t("list.tabCleared")}</button></div><div id="list" aria-live="polite"></div><div class="aside-footer">${t("list.footer")}</div></aside><div class="map-wrap"><div id="map" aria-label="${t("map.ariaLabel", { city: city.name })}"></div><div class="map-note"><span class="pulse"></span> ${t("map.note")}</div><div id="heat-controls" class="heat-controls" hidden><label>${t("heat.windowLabel")} <select id="heat-window" aria-label="Heatmap time window"><option value="0">${t("heat.all")}</option><option value="24">${t("heat.day")}</option><option value="168">${t("heat.week")}</option></select></label></div><button id="locate" title="${t("map.locate")}" aria-label="${t("map.locate")}">⌖</button><div id="detail" hidden></div><div class="map-legend"><span>●</span> ${t("map.legendReported")} <i></i> ${t("map.legendDisclaimer")}</div></div></section>
+<section class="workspace"><aside><div class="list-header"><div><h2>${t("list.title")}</h2><p id="count">${t("list.loading")}</p></div><span class="live">${t("list.live")}</span></div><div class="tabs"><button id="active-tab" class="selected">${t("list.tabNow")}</button><button id="resolved-tab">${t("list.tabCleared")}</button><button id="stale-tab">${t("list.tabStale")}</button></div><div id="list" aria-live="polite"></div><div class="aside-footer">${t("list.footer")}</div></aside><div class="map-wrap"><div id="map" aria-label="${t("map.ariaLabel", { city: city.name })}"></div><div class="map-note"><span class="pulse"></span> ${t("map.note")}</div><div id="heat-controls" class="heat-controls" hidden><label>${t("heat.windowLabel")} <select id="heat-window" aria-label="Heatmap time window"><option value="0">${t("heat.all")}</option><option value="24">${t("heat.day")}</option><option value="168">${t("heat.week")}</option></select></label></div><button id="locate" title="${t("map.locate")}" aria-label="${t("map.locate")}">⌖</button><div id="detail" hidden></div><div class="map-legend"><span>●</span> ${t("map.legendReported")} <i></i> ${t("map.legendDisclaimer")}</div></div></section>
 <section class="bottom"><div><span class="leaf">✳</span><div><strong>${t("cta.title")}</strong><p>${t("cta.body")}</p></div></div><button id="report-bottom">${t("cta.button")} ↗</button></section><footer><span>${t("footer.tagline")}</span><span id="updated">${t("footer.connecting")}</span></footer></main>
 <dialog id="report-dialog"><form id="report-form"><div class="dialog-head"><div class="eyebrow">${t("dialogs.report.eyebrow")}</div><button type="button" class="close" aria-label="${t("dialogs.report.closeAria")}">×</button></div><h2>${t("dialogs.report.title")}</h2><p>${t("dialogs.report.intro")}</p><label>${t("dialogs.report.typeLabel")}<select name="category">${Object.entries(
   categories,
@@ -115,7 +115,7 @@ $("#app").innerHTML = `
   .join(
     "",
   )}</select></label><label>${t("dialogs.report.headlineLabel")}<input name="title" required minlength="3" maxlength="100" placeholder="${t("dialogs.report.headlinePh")}"></label><label>${t("dialogs.report.locationLabel")}<input name="location" required minlength="3" maxlength="100" placeholder="${t("dialogs.report.locationPh")}"></label><div class="form-row"><label>${t("dialogs.report.latLabel")}<input name="lat" type="number" step="any" min="37.70" max="37.84" required></label><label>${t("dialogs.report.lngLabel")}<input name="lng" type="number" step="any" min="-122.53" max="-122.35" required></label></div><label>${t("dialogs.report.impactLabel")}<select name="severity"><option value="1">${t("dialogs.report.impactMinor")}</option><option value="2" selected>${t("dialogs.report.impactModerate")}</option><option value="3">${t("dialogs.report.impactMajor")}</option></select></label><label>${t("dialogs.report.descriptionLabel")}<textarea name="description" maxlength="500" rows="3" placeholder="${t("dialogs.report.descriptionPh")}"></textarea></label><label>${t("photo.uploadLabel")} <span class="optional-note">(${t("dialogs.report.optional")})</span><input id="photo-file" type="file" accept="image/jpeg,image/png,image/webp"><span class="form-hint">${t("photo.uploadHint")}</span><span id="photo-preview" class="photo-preview" hidden><img alt="${t("photo.previewAlt")}"><button type="button" id="photo-remove">${t("photo.remove")}</button></span></label><div id="similar-box" class="similar-box" hidden></div><p class="form-note">${t("dialogs.report.formNote")}</p><p id="form-error" role="alert"></p><button class="primary submit" type="submit">${t("dialogs.report.submit")} ↗</button></form></dialog>
-<dialog id="about-dialog"><button class="close" aria-label="${t("dialogs.about.closeAria")}">×</button><div class="eyebrow">${t("dialogs.about.eyebrow")}</div><h2>${t("dialogs.about.title")}</h2><p>${t("dialogs.about.intro")}</p><h3>${t("dialogs.about.estimatesTitle")}</h3><p>${t("dialogs.about.estimatesBody")}</p><h3>${t("dialogs.about.honestTitle")}</h3><p>${t("dialogs.about.honestBody")}</p><h3>${t("dialogs.about.shortcutsTitle")}</h3><p>${t("dialogs.about.shortcutsBody")}</p></dialog><dialog id="flag-dialog"><form id="flag-form"><div class="dialog-head"><div class="eyebrow">${t("dialogs.flag.eyebrow")}</div><button type="button" class="close" aria-label="${t("dialogs.flag.closeAria")}">×</button></div><h2>${t("dialogs.flag.title")}</h2><p>${t("dialogs.flag.intro")}</p><div class="flag-reasons"><label><input type="radio" name="reason" value="spam" required> ${t("dialogs.flag.reasonSpam")}</label><label><input type="radio" name="reason" value="inaccurate"> ${t("dialogs.flag.reasonInaccurate")}</label><label><input type="radio" name="reason" value="inappropriate"> ${t("dialogs.flag.reasonInappropriate")}</label><label><input type="radio" name="reason" value="duplicate"> ${t("dialogs.flag.reasonDuplicate")}</label></div><p id="flag-error" role="alert"></p><button class="primary submit" type="submit">${t("dialogs.flag.submit")}</button></form></dialog><dialog id="alert-dialog"><form id="alert-form"><div class="dialog-head"><div class="eyebrow">${t("dialogs.alert.eyebrow")}</div><button type="button" class="close" aria-label="${t("dialogs.alert.closeAria")}">×</button></div><h2>${t("dialogs.alert.title")}</h2><p>${t("dialogs.alert.intro")}</p><label>${t("dialogs.alert.nameLabel")}<input name="label" required minlength="1" maxlength="60" placeholder="${t("dialogs.alert.namePh")}"></label><label>${t("dialogs.alert.radiusLabel")}<select name="radiusM"><option value="100">${t("dialogs.alert.r100")}</option><option value="250" selected>${t("dialogs.alert.r250")}</option><option value="500">${t("dialogs.alert.r500")}</option><option value="1000">${t("dialogs.alert.r1km")}</option><option value="2500">${t("dialogs.alert.r25km")}</option><option value="5000">${t("dialogs.alert.r5km")}</option></select></label><p id="alert-error" role="alert"></p><button class="primary submit" type="submit">${t("dialogs.alert.submit")}</button></form></dialog><dialog id="leaders-dialog"><button class="close" aria-label="${t("dialogs.leaders.closeAria")}">×</button><div class="eyebrow">${t("dialogs.leaders.eyebrow")}</div><h2>${t("dialogs.leaders.title")}</h2><div id="leaders-list"><p class="comments-empty">Loading…</p></div></dialog><dialog id="profile-dialog"><button class="close" aria-label="${t("dialogs.profile.closeAria")}">×</button><div class="eyebrow">${t("dialogs.profile.eyebrow")}</div><h2 id="profile-title">${t("dialogs.profile.title")}</h2><div id="profile-body"><p class="comments-empty">Loading…</p></div></dialog><dialog id="trends-dialog"><button class="close" aria-label="${t("dialogs.trends.closeAria")}">×</button><div class="eyebrow">${t("dialogs.trends.eyebrow")}</div><h2>${t("dialogs.trends.title")}</h2><p>${t("dialogs.trends.intro")}</p><canvas id="trends-chart" width="640" height="300" aria-label="${t("dialogs.trends.chartAria")}"></canvas><div id="trends-legend" class="trends-legend"></div><div id="trends-stats" class="trends-stats"></div></dialog><dialog id="import-dialog"><form id="import-form"><div class="dialog-head"><div class="eyebrow">${t("dialogs.import.eyebrow")}</div><button type="button" class="close" aria-label="${t("dialogs.import.closeAria")}">×</button></div><h2>${t("dialogs.import.title")}</h2><p>${t("dialogs.import.intro")}</p><label>${t("dialogs.import.fileLabel")}<input name="file" type="file" accept=".geojson,.json,application/json" required></label><p id="import-error" role="alert"></p><p id="import-status" role="status"></p><button class="primary submit" type="submit">Import reports</button></form></dialog><dialog id="moderation-dialog"><div class="dialog-head"><div class="eyebrow">${t("moderation.eyebrow")}</div><button type="button" class="close" aria-label="${t("dialogs.report.closeAria")}">×</button></div><h2>${t("moderation.title")}</h2><div id="moderation-auth"><p>${t("moderation.needToken")}</p><label>${t("moderation.tokenLabel")}<input id="moderation-token" type="password" autocomplete="off" placeholder="${t("moderation.tokenPh")}"></label><p id="moderation-error" role="alert"></p><button class="primary submit" id="moderation-unlock">${t("moderation.unlock")}</button></div><div id="moderation-list" hidden></div></dialog><div id="toast" role="status"></div>`;
+<dialog id="about-dialog"><button class="close" aria-label="${t("dialogs.about.closeAria")}">×</button><div class="eyebrow">${t("dialogs.about.eyebrow")}</div><h2>${t("dialogs.about.title")}</h2><p>${t("dialogs.about.intro")}</p><h3>${t("dialogs.about.estimatesTitle")}</h3><p>${t("dialogs.about.estimatesBody")}</p><h3>${t("dialogs.about.honestTitle")}</h3><p>${t("dialogs.about.honestBody")}</p><h3>${t("dialogs.about.shortcutsTitle")}</h3><p>${t("dialogs.about.shortcutsBody")}</p></dialog><dialog id="flag-dialog"><form id="flag-form"><div class="dialog-head"><div class="eyebrow">${t("dialogs.flag.eyebrow")}</div><button type="button" class="close" aria-label="${t("dialogs.flag.closeAria")}">×</button></div><h2>${t("dialogs.flag.title")}</h2><p>${t("dialogs.flag.intro")}</p><div class="flag-reasons"><label><input type="radio" name="reason" value="spam" required> ${t("dialogs.flag.reasonSpam")}</label><label><input type="radio" name="reason" value="inaccurate"> ${t("dialogs.flag.reasonInaccurate")}</label><label><input type="radio" name="reason" value="inappropriate"> ${t("dialogs.flag.reasonInappropriate")}</label><label><input type="radio" name="reason" value="duplicate"> ${t("dialogs.flag.reasonDuplicate")}</label></div><p id="flag-error" role="alert"></p><button class="primary submit" type="submit">${t("dialogs.flag.submit")}</button></form></dialog><dialog id="resolve-dialog"><form id="resolve-form"><div class="dialog-head"><div class="eyebrow">${t("dialogs.resolve.eyebrow")}</div><button type="button" class="close" aria-label="${t("dialogs.report.closeAria")}">×</button></div><h2>${t("dialogs.resolve.title")}</h2><p>${t("dialogs.resolve.intro")}</p><label>${t("dialogs.resolve.noteLabel")}<textarea name="note" maxlength="300" rows="3" placeholder="${t("dialogs.resolve.notePh")}"></textarea></label><p id="resolve-error" role="alert"></p><button class="primary submit" type="submit">${t("dialogs.resolve.submit")}</button></form></dialog><dialog id="alert-dialog"><form id="alert-form"><div class="dialog-head"><div class="eyebrow">${t("dialogs.alert.eyebrow")}</div><button type="button" class="close" aria-label="${t("dialogs.alert.closeAria")}">×</button></div><h2>${t("dialogs.alert.title")}</h2><p>${t("dialogs.alert.intro")}</p><label>${t("dialogs.alert.nameLabel")}<input name="label" required minlength="1" maxlength="60" placeholder="${t("dialogs.alert.namePh")}"></label><label>${t("dialogs.alert.radiusLabel")}<select name="radiusM"><option value="100">${t("dialogs.alert.r100")}</option><option value="250" selected>${t("dialogs.alert.r250")}</option><option value="500">${t("dialogs.alert.r500")}</option><option value="1000">${t("dialogs.alert.r1km")}</option><option value="2500">${t("dialogs.alert.r25km")}</option><option value="5000">${t("dialogs.alert.r5km")}</option></select></label><p id="alert-error" role="alert"></p><button class="primary submit" type="submit">${t("dialogs.alert.submit")}</button></form></dialog><dialog id="leaders-dialog"><button class="close" aria-label="${t("dialogs.leaders.closeAria")}">×</button><div class="eyebrow">${t("dialogs.leaders.eyebrow")}</div><h2>${t("dialogs.leaders.title")}</h2><div id="leaders-list"><p class="comments-empty">Loading…</p></div></dialog><dialog id="profile-dialog"><button class="close" aria-label="${t("dialogs.profile.closeAria")}">×</button><div class="eyebrow">${t("dialogs.profile.eyebrow")}</div><h2 id="profile-title">${t("dialogs.profile.title")}</h2><div id="profile-body"><p class="comments-empty">Loading…</p></div></dialog><dialog id="trends-dialog"><button class="close" aria-label="${t("dialogs.trends.closeAria")}">×</button><div class="eyebrow">${t("dialogs.trends.eyebrow")}</div><h2>${t("dialogs.trends.title")}</h2><p>${t("dialogs.trends.intro")}</p><canvas id="trends-chart" width="640" height="300" aria-label="${t("dialogs.trends.chartAria")}"></canvas><div id="trends-legend" class="trends-legend"></div><div id="trends-stats" class="trends-stats"></div></dialog><dialog id="import-dialog"><form id="import-form"><div class="dialog-head"><div class="eyebrow">${t("dialogs.import.eyebrow")}</div><button type="button" class="close" aria-label="${t("dialogs.import.closeAria")}">×</button></div><h2>${t("dialogs.import.title")}</h2><p>${t("dialogs.import.intro")}</p><label>${t("dialogs.import.fileLabel")}<input name="file" type="file" accept=".geojson,.json,application/json" required></label><p id="import-error" role="alert"></p><p id="import-status" role="status"></p><button class="primary submit" type="submit">Import reports</button></form></dialog><dialog id="moderation-dialog"><div class="dialog-head"><div class="eyebrow">${t("moderation.eyebrow")}</div><button type="button" class="close" aria-label="${t("dialogs.report.closeAria")}">×</button></div><h2>${t("moderation.title")}</h2><div id="moderation-auth"><p>${t("moderation.needToken")}</p><label>${t("moderation.tokenLabel")}<input id="moderation-token" type="password" autocomplete="off" placeholder="${t("moderation.tokenPh")}"></label><p id="moderation-error" role="alert"></p><button class="primary submit" id="moderation-unlock">${t("moderation.unlock")}</button></div><div id="moderation-list" hidden></div></dialog><div id="toast" role="status"></div>`;
 $(".toolbar").insertAdjacentHTML(
   "beforebegin",
   '<section id="summary" class="summary" aria-label="City overview"></section>',
@@ -184,11 +184,11 @@ async function api(path, body, method) {
 }
 function age(t) {
   const mins = Math.max(0, Math.floor((Date.now() - t) / 60000));
-  return mins < 1
-    ? "just now"
-    : mins < 60
-      ? `${mins}m ago`
-      : `${Math.floor(mins / 60)}h ago`;
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 48) return `${hours}h ago`;
+  return `${Math.floor(hours / 24)}d ago`;
 }
 // Inline attachments take precedence over legacy photo URLs.
 function photoFor(r) {
@@ -222,10 +222,13 @@ async function compressPhoto(file) {
   }
 }
 function visible() {
+  // The stale tab shows only expired reports, which carry status "active"
+  // with the expired flag set.
+  const rows = status === "stale" ? reports.filter((r) => r.expired) : reports;
   return filterReports(
-    reports,
+    rows,
     {
-      status,
+      status: status === "stale" ? "active" : status,
       category,
       query,
       majorOnly,
@@ -250,8 +253,13 @@ function render() {
     ? t("hero.community")
     : t("hero.shared");
   const rows = visible();
-  $("#count").textContent =
-    `${status === "active" ? t("list.countActive", { count: rows.length }) : t("list.countCleared", { count: rows.length })}`;
+  const countKey =
+    status === "active"
+      ? "list.countActive"
+      : status === "resolved"
+        ? "list.countCleared"
+        : "list.countStale";
+  $("#count").textContent = t(countKey, { count: rows.length });
   const emptyIcon = savedOnly ? "☆" : followedOnly ? "🔔" : "☀";
   const emptyTitle = savedOnly
     ? t("empty.savedTitle")
@@ -267,7 +275,7 @@ function render() {
     ? rows
         .map((r) => {
           const c = categories[r.category];
-          return `<button class="report-card ${selected === r.id ? "chosen" : ""}" data-id="${r.id}"><div class="card-top"><span class="category-icon" style="--accent:${c.color}">${c.icon}</span><span class="category-label">${c.label}</span>${r.demo ? `<span class="demo">${t("card.demo")}</span>` : ""}${isFresh(r) && r.status === "active" ? `<span class="fresh-badge">${t("freshness.new")}</span>` : ""}${unseen.has(r.id) ? `<span class="unseen-dot" title="${t("card.newUpdates")}">●</span>` : ""}<span class="age">${age(r.updatedAt)}</span></div><h3>${escape(r.title)}</h3><p class="place">${escape(r.location)}</p><div class="card-bottom"><span class="estimate">${r.status === "resolved" ? t("card.cleared") : `◷ ${escape(r.prediction.label)}`}</span><span>♧ ${t("card.confirmations", { count: r.confirmations })}</span>${r.commentCount ? `<span>💬 ${r.commentCount}</span>` : ""}${photoFor(r) ? `<span title="${t("card.photoTitle")}">📷</span>` : ""}<span class="kudos-btn" data-kudos="${r.id}" role="button" tabindex="0" aria-pressed="${kudoed.has(r.id)}" title="${t("kudos.thank")}">${kudoed.has(r.id) ? t("kudos.thanked") : t("kudos.thank")}${r.kudosCount ? ` ${r.kudosCount}` : ""}</span></div></button>`;
+          return `<button class="report-card ${selected === r.id ? "chosen" : ""}" data-id="${r.id}"><div class="card-top"><span class="category-icon" style="--accent:${c.color}">${c.icon}</span><span class="category-label">${c.label}</span>${r.demo ? `<span class="demo">${t("card.demo")}</span>` : ""}${isFresh(r) && r.status === "active" && !r.expired ? `<span class="fresh-badge">${t("freshness.new")}</span>` : ""}${r.expired ? `<span class="expired-badge">${t("card.stale")}</span>` : ""}${unseen.has(r.id) ? `<span class="unseen-dot" title="${t("card.newUpdates")}">●</span>` : ""}<span class="age">${age(r.updatedAt)}</span></div><h3>${escape(r.title)}</h3><p class="place">${escape(r.location)}</p><div class="card-bottom"><span class="estimate">${r.status === "resolved" ? t("card.cleared") : `◷ ${escape(r.prediction.label)}`}</span><span>♧ ${t("card.confirmations", { count: r.confirmations })}</span>${r.commentCount ? `<span>💬 ${r.commentCount}</span>` : ""}${photoFor(r) ? `<span title="${t("card.photoTitle")}">📷</span>` : ""}<span class="kudos-btn" data-kudos="${r.id}" role="button" tabindex="0" aria-pressed="${kudoed.has(r.id)}" title="${t("kudos.thank")}">${kudoed.has(r.id) ? t("kudos.thanked") : t("kudos.thank")}${r.kudosCount ? ` ${r.kudosCount}` : ""}</span></div></button>`;
         })
         .join("")
     : `<div class="empty"><span>${emptyIcon}</span><h3>${emptyTitle}</h3><p>${emptyHint}</p><button id="reset-filters">${t("empty.reset")}</button></div>`;
@@ -441,21 +449,40 @@ function renderDetail() {
     `<li><span>🙏</span> ${t("timeline.kudos", { n: r.kudosCount || 0 })}</li>`,
     `<li><span>💬</span> ${t("timeline.comments", { n: r.commentCount || 0 })}</li>`,
   ];
-  if (r.status === "resolved" && r.resolvedAt)
+  if (r.editedAt)
+    timelineItems.push(
+      `<li><span>✎</span> ${t("timeline.editedOn", { age: age(r.editedAt) })}</li>`,
+    );
+  if (r.status === "resolved" && r.resolvedAt) {
     timelineItems.push(
       `<li><span>✓</span> ${t("timeline.clearedOn", { age: age(r.resolvedAt) })}</li>`,
     );
+    if (r.resolvedNote)
+      timelineItems.push(`<li><span>💡</span> ${escape(r.resolvedNote)}</li>`);
+  }
+  const isAuthor = r.creator === visitor;
+  const canEdit =
+    isAuthor && r.status === "active" && Date.now() - r.createdAt < 86400000;
+  const detailActions = r.hidden
+    ? ""
+    : r.status === "active"
+      ? r.expired
+        ? `<p class="stale-notice">${t("detail.staleNotice")}</p><div class="detail-actions"><button class="primary" data-vote="confirm">${t("detail.stillThere")}</button></div>`
+        : `<div class="detail-actions"><button class="primary" data-vote="confirm">${t("detail.voteConfirm")}</button><button data-vote="clear">${t("detail.voteClear")}</button>${isAuthor ? `<button id="resolve-report">${t("detail.resolve")}</button>` : ""}</div>`
+      : `<p>${t("detail.communityCleared")}</p>`;
   $("#detail").innerHTML =
-    `<button class="close" id="close-detail" aria-label="${t("detail.closeAria")}">×</button><div class="eyebrow" style="color:${c.color}">${c.label}${r.demo ? t("detail.demoSuffix") : ""}</div><h2>${escape(r.title)}</h2><p class="place">${escape(r.location)}</p>${detailPhotoHtml}<p>${escape(r.description)}</p>${r.hidden ? `<p class="hidden-notice">${t("detail.hiddenNotice")}</p>` : ""}<div class="prediction"><span>${t("detail.estimateTitle")}<strong>${r.status === "resolved" ? t("detail.cleared") : escape(r.prediction.label)}</strong></span><span class="confidence">${t("detail.confidence", { label: r.prediction.confidence })}</span></div><p class="detail-note">${t("detail.metaLine", { confirmations: r.confirmations, votes: r.clearVotes })}</p>${r.hidden ? "" : r.status === "active" ? `<div class="detail-actions"><button class="primary" data-vote="confirm">${t("detail.voteConfirm")}</button><button data-vote="clear">${t("detail.voteClear")}</button></div>` : `<p>${t("detail.communityCleared")}</p>`}<div class="timeline"><h3>${t("timeline.title")}</h3><ul>${timelineItems.join("")}</ul></div>`;
+    `<button class="close" id="close-detail" aria-label="${t("detail.closeAria")}">×</button><div class="eyebrow" style="color:${c.color}">${c.label}${r.demo ? t("detail.demoSuffix") : ""}</div><h2>${escape(r.title)}</h2><p class="place">${escape(r.location)}</p>${detailPhotoHtml}<p>${escape(r.description)}</p>${r.hidden ? `<p class="hidden-notice">${t("detail.hiddenNotice")}</p>` : ""}<div class="prediction"><span>${t("detail.estimateTitle")}<strong>${r.status === "resolved" ? t("detail.cleared") : escape(r.prediction.label)}</strong></span><span class="confidence">${t("detail.confidence", { label: r.prediction.confidence })}</span></div><p class="detail-note">${t("detail.metaLine", { confirmations: r.confirmations, votes: r.clearVotes })}</p>${detailActions}<div class="timeline"><h3>${t("timeline.title")}</h3><ul>${timelineItems.join("")}</ul></div>`;
   $("#detail").insertAdjacentHTML(
     "beforeend",
-    `<div class="report-tools"><button id="save-report" aria-pressed="${saved.has(r.id)}">${saved.has(r.id) ? t("detail.saveOn") : t("detail.saveOff")}</button><button id="follow-report" aria-pressed="${followed.has(r.id)}">${followed.has(r.id) ? t("detail.followOn") : t("detail.followOff")}</button><button id="kudos-report" aria-pressed="${kudoed.has(r.id)}">${kudoed.has(r.id) ? t("kudos.thanked") : t("kudos.thank")}${r.kudosCount ? ` · ${r.kudosCount}` : ""}</button><button id="flag-report">${t("detail.flag")}</button><button id="share-report">${t("detail.share")} ↗</button></div><div class="impact-line">${["", t("detail.severity1"), t("detail.severity2"), t("detail.severity3")][r.severity]} ${t("detail.firstReported", { age: age(r.createdAt) })}</div><div class="comments"><h3>${t("detail.notesTitle")}</h3><div id="comment-list"><p class="comments-empty">${t("detail.notesLoading")}</p></div><form id="comment-form"><input name="note" maxlength="300" placeholder="${t("detail.notePlaceholder")}" aria-label="${t("detail.noteAria")}" autocomplete="off"><button type="submit">${t("detail.post")}</button></form><p id="comment-error" role="alert"></p></div>`,
+    `<div class="report-tools"><button id="save-report" aria-pressed="${saved.has(r.id)}">${saved.has(r.id) ? t("detail.saveOn") : t("detail.saveOff")}</button><button id="follow-report" aria-pressed="${followed.has(r.id)}">${followed.has(r.id) ? t("detail.followOn") : t("detail.followOff")}</button><button id="kudos-report" aria-pressed="${kudoed.has(r.id)}">${kudoed.has(r.id) ? t("kudos.thanked") : t("kudos.thank")}${r.kudosCount ? ` · ${r.kudosCount}` : ""}</button><button id="flag-report">${t("detail.flag")}</button>${canEdit ? `<button id="edit-report">${t("detail.edit")}</button>` : ""}<button id="share-report">${t("detail.share")} ↗</button></div><div id="edit-form-wrap" hidden></div><div class="impact-line">${["", t("detail.severity1"), t("detail.severity2"), t("detail.severity3")][r.severity]} ${t("detail.firstReported", { age: age(r.createdAt) })}</div><div class="comments"><h3>${t("detail.notesTitle")}</h3><div id="comment-list"><p class="comments-empty">${t("detail.notesLoading")}</p></div><form id="comment-form"><input name="note" maxlength="300" placeholder="${t("detail.notePlaceholder")}" aria-label="${t("detail.noteAria")}" autocomplete="off"><button type="submit">${t("detail.post")}</button></form><p id="comment-error" role="alert"></p></div>`,
   );
   loadComments(r.id);
 }
 async function refresh() {
   try {
-    const next = await api(`/reports?city=${city.id}`);
+    // The stale tab needs reports the default view leaves out.
+    const qs = status === "stale" ? "includeExpired=1&" : "";
+    const next = await api(`/reports?${qs}city=${city.id}`);
     const updates = detectUpdates(next, followed, seen);
     reports = next;
     lastUpdated = Date.now();
@@ -482,16 +509,31 @@ async function refresh() {
     if (initialReport) {
       const id = initialReport;
       initialReport = null;
-      const target = reports.find((r) => r.id === id);
+      let target = reports.find((r) => r.id === id);
+      if (!target) {
+        // Expired reports aren't in the default list — fetch one directly so
+        // shared links to stale reports still open.
+        try {
+          const fetched = await api(`/reports/${id}`);
+          if (fetched && !fetched.hidden) {
+            fetched.city = fetched.city || city.id;
+            reports.unshift(fetched);
+            target = fetched;
+          }
+        } catch {
+          target = null;
+        }
+      }
       if (target) {
         // A shared /r/:id link may point at another city — switch there first.
         if (target.city && target.city !== city.id) {
           await switchCity(target.city, { keepReport: id });
           return;
         }
-        status = target.status;
+        status = target.expired ? "stale" : target.status;
         $("#active-tab").classList.toggle("selected", status === "active");
         $("#resolved-tab").classList.toggle("selected", status === "resolved");
+        $("#stale-tab").classList.toggle("selected", status === "stale");
         select(target.id);
       } else toast(t("toasts.sharedNotFound"));
     }
@@ -607,9 +649,26 @@ async function switchCity(id, opts = {}) {
   refreshWeather();
   refreshNwsBanner();
   if (opts.keepReport) {
-    const target = reports.find((r) => r.id === opts.keepReport);
-    if (target) select(target.id);
-    else toast(t("toasts.sharedNotFound"));
+    let target = reports.find((r) => r.id === opts.keepReport);
+    if (!target) {
+      try {
+        const fetched = await api(`/reports/${opts.keepReport}`);
+        if (fetched && !fetched.hidden) {
+          fetched.city = fetched.city || city.id;
+          reports.unshift(fetched);
+          target = fetched;
+        }
+      } catch {
+        target = null;
+      }
+    }
+    if (target) {
+      status = target.expired ? "stale" : target.status;
+      $("#active-tab").classList.toggle("selected", status === "active");
+      $("#resolved-tab").classList.toggle("selected", status === "resolved");
+      $("#stale-tab").classList.toggle("selected", status === "stale");
+      select(target.id);
+    } else toast(t("toasts.sharedNotFound"));
   }
 }
 async function loadCities() {
@@ -647,6 +706,7 @@ function resetFilters() {
   hideDemo = false;
   savedOnly = false;
   followedOnly = false;
+  status = "active";
   selected = null;
   lastDetailKey = null;
   $("#detail").hidden = true;
@@ -655,10 +715,13 @@ function resetFilters() {
   $("#hide-demo").checked = false;
   $("#saved-toggle").setAttribute("aria-pressed", "false");
   $("#followed-toggle").setAttribute("aria-pressed", "false");
+  $("#active-tab").classList.add("selected");
+  $("#resolved-tab").classList.remove("selected");
+  $("#stale-tab").classList.remove("selected");
   document
     .querySelectorAll(".chip")
     .forEach((b) => b.classList.toggle("active", b.dataset.category === "all"));
-  render();
+  refresh();
 }
 $("#saved-toggle").onclick = () => {
   savedOnly = !savedOnly;
@@ -1558,6 +1621,7 @@ $("#search").addEventListener("input", (e) => {
 for (const [selector, value] of [
   ["#active-tab", "active"],
   ["#resolved-tab", "resolved"],
+  ["#stale-tab", "stale"],
 ])
   $(selector).onclick = () => {
     status = value;
@@ -1566,7 +1630,8 @@ for (const [selector, value] of [
     $("#detail").hidden = true;
     $("#active-tab").classList.toggle("selected", value === "active");
     $("#resolved-tab").classList.toggle("selected", value === "resolved");
-    render();
+    $("#stale-tab").classList.toggle("selected", value === "stale");
+    refresh();
   };
 $("#detail").onclick = async (e) => {
   if (e.target.closest("#save-report")) {
@@ -1611,6 +1676,16 @@ $("#detail").onclick = async (e) => {
     $("#flag-error").textContent = "";
     $("#flag-form").reset();
     $("#flag-dialog").showModal();
+    return;
+  }
+  if (e.target.closest("#resolve-report")) {
+    $("#resolve-error").textContent = "";
+    $("#resolve-form").reset();
+    $("#resolve-dialog").showModal();
+    return;
+  }
+  if (e.target.closest("#edit-report")) {
+    toggleEditForm();
     return;
   }
   if (e.target.closest("#kudos-report")) {
@@ -1667,6 +1742,31 @@ $("#detail").onclick = async (e) => {
 };
 $("#detail").addEventListener("submit", async (e) => {
   const isReply = e.target.classList.contains("reply-form");
+  if (e.target.id === "edit-form") {
+    e.preventDefault();
+    const button = e.target.querySelector(".submit");
+    const errorEl = $("#edit-error");
+    button.disabled = true;
+    if (errorEl) errorEl.textContent = "";
+    try {
+      const patch = {
+        category: e.target.elements.category.value,
+        location: e.target.elements.location.value.trim(),
+        description: e.target.elements.description.value.trim(),
+      };
+      const result = await api(`/reports/${selected}`, patch, "PATCH");
+      const i = reports.findIndex((r) => r.id === selected);
+      if (i >= 0) reports[i] = { ...reports[i], ...result };
+      lastDetailKey = null;
+      render();
+      toast(t("toasts.edited"));
+    } catch (error) {
+      if (errorEl) errorEl.textContent = error.message;
+    } finally {
+      button.disabled = false;
+    }
+    return;
+  }
   if (e.target.id !== "comment-form" && !isReply) return;
   e.preventDefault();
   const input = e.target.elements.note;
@@ -1888,6 +1988,7 @@ $("#report-form").onsubmit = async (e) => {
     $("#search").value = "";
     $("#active-tab").classList.add("selected");
     $("#resolved-tab").classList.remove("selected");
+    $("#stale-tab").classList.remove("selected");
     document
       .querySelectorAll(".chip")
       .forEach((b) =>
@@ -1924,6 +2025,50 @@ $("#flag-form").onsubmit = async (e) => {
   }
 };
 $("#about").onclick = () => $("#about-dialog").showModal();
+// The author marks their own report resolved, with an optional note about
+// what changed. Confirmers hear about it via the notification center.
+$("#resolve-form").onsubmit = async (e) => {
+  e.preventDefault();
+  const note = e.target.elements.note.value.trim();
+  const button = e.target.querySelector(".submit");
+  button.disabled = true;
+  $("#resolve-error").textContent = "";
+  try {
+    const result = await api(`/reports/${selected}/resolve`, { note });
+    const i = reports.findIndex((r) => r.id === selected);
+    if (i >= 0) reports[i] = { ...reports[i], ...result };
+    $("#resolve-dialog").close();
+    lastDetailKey = null;
+    render();
+    toast(t("toasts.resolved"));
+  } catch (error) {
+    $("#resolve-error").textContent = error.message;
+  } finally {
+    button.disabled = false;
+  }
+};
+function toggleEditForm() {
+  const r = reports.find((x) => x.id === selected);
+  const wrap = $("#edit-form-wrap");
+  if (!r || !wrap) return;
+  if (!wrap.hidden) {
+    wrap.hidden = true;
+    wrap.innerHTML = "";
+    return;
+  }
+  wrap.innerHTML = `<form id="edit-form"><h4>${t("dialogs.edit.title")}</h4><label>${t("dialogs.report.typeLabel")}<select name="category">${Object.entries(
+    categories,
+  )
+    .map(
+      ([k, c]) =>
+        `<option value="${k}"${k === r.category ? " selected" : ""}>${c.label}</option>`,
+    )
+    .join(
+      "",
+    )}</select></label><label>${t("dialogs.report.locationLabel")}<input name="location" required minlength="3" maxlength="100" value="${escape(r.location)}"></label><label>${t("dialogs.report.descriptionLabel")}<textarea name="description" maxlength="500" rows="3">${escape(r.description || "")}</textarea></label><p class="form-note">${t("dialogs.edit.windowNote")}</p><p id="edit-error" role="alert"></p><button class="primary submit" type="submit">${t("dialogs.edit.submit")}</button></form>`;
+  wrap.hidden = false;
+  wrap.querySelector("textarea, input").focus();
+}
 // ---- Moderation queue: flagged reports, gated by the admin token ----
 async function adminApi(path, body, method = "GET") {
   const token = sessionStorage.getItem("friction-admin-token") || "";
@@ -1946,18 +2091,21 @@ function renderModerationList(items) {
     list.innerHTML = `<p class="comments-empty">${t("moderation.empty")}</p>`;
     return;
   }
-  list.innerHTML = items
-    .map((r) => {
-      const c = categories[r.category] || { label: r.category, icon: "•" };
-      const reasons = Object.entries(r.flagReasons || {})
-        .map(
-          ([reason, n]) =>
-            `<span class="flag-reason">${escape(reason)} ×${n}</span>`,
-        )
-        .join("");
-      return `<div class="mod-row" data-mod="${r.id}"><div><strong>${c.icon} ${escape(r.title)}</strong><span class="mod-meta">${escape(r.location)} · ${t("moderation.flags", { n: r.flagCount })}${r.hidden ? ` · ${t("moderation.isHidden")}` : ""}</span><div class="flag-reasons">${reasons}</div></div><div class="mod-actions"><button data-mod-act="hide" ${r.hidden ? "disabled" : ""}>${t("moderation.hide")}</button><button data-mod-act="restore" ${r.hidden ? "" : "disabled"}>${t("moderation.restore")}</button><button data-mod-act="delete" class="danger">${t("moderation.delete")}</button></div></div>`;
-    })
-    .join("");
+  const bulkBar = `<div class="mod-bulk"><button data-mod-bulk="hide">${t("moderation.hideSelected")}</button><button data-mod-bulk="restore">${t("moderation.restoreSelected")}</button><span class="mod-merge"><input id="mod-merge-target" placeholder="${t("moderation.mergeTargetPh")}" aria-label="${t("moderation.mergeTargetPh")}"><button data-mod-bulk="merge">${t("moderation.mergeSelected")}</button></span></div><p id="mod-bulk-error" role="alert"></p>`;
+  list.innerHTML =
+    bulkBar +
+    items
+      .map((r) => {
+        const c = categories[r.category] || { label: r.category, icon: "•" };
+        const reasons = Object.entries(r.flagReasons || {})
+          .map(
+            ([reason, n]) =>
+              `<span class="flag-reason">${escape(reason)} ×${n}</span>`,
+          )
+          .join("");
+        return `<div class="mod-row" data-mod="${r.id}"><input type="checkbox" class="mod-check" aria-label="${t("moderation.selectAria")}"><div class="mod-info"><strong>${c.icon} ${escape(r.title)}</strong><span class="mod-meta">${escape(r.location)} · ${t("moderation.flags", { n: r.flagCount })}${r.hidden ? ` · ${t("moderation.isHidden")}` : ""}</span><div class="flag-reasons">${reasons}</div></div><div class="mod-actions"><button data-mod-act="hide" ${r.hidden ? "disabled" : ""}>${t("moderation.hide")}</button><button data-mod-act="restore" ${r.hidden ? "" : "disabled"}>${t("moderation.restore")}</button><button data-mod-act="delete" class="danger">${t("moderation.delete")}</button></div></div>`;
+      })
+      .join("");
 }
 async function loadModerationQueue() {
   const errorEl = $("#moderation-error");
@@ -2027,6 +2175,66 @@ $("#moderation-list").addEventListener("click", async (e) => {
   } catch (error) {
     toast(error.message);
     btn.disabled = false;
+  }
+});
+// Bulk moderation: hide/restore every checked row, or fold the checked
+// duplicates into one canonical report.
+$("#moderation-list").addEventListener("click", async (e) => {
+  const bulkBtn = e.target.closest("[data-mod-bulk]");
+  if (!bulkBtn) return;
+  const errorEl = $("#mod-bulk-error");
+  const ids = [...document.querySelectorAll(".mod-check:checked")].map(
+    (box) => box.closest("[data-mod]").dataset.mod,
+  );
+  if (!ids.length) {
+    errorEl.textContent = t("moderation.noneSelected");
+    return;
+  }
+  errorEl.textContent = "";
+  bulkBtn.disabled = true;
+  try {
+    const action = bulkBtn.dataset.modBulk;
+    if (action === "merge") {
+      const targetId = $("#mod-merge-target").value.trim();
+      if (!targetId || ids.includes(targetId))
+        throw new Error(t("moderation.mergeTargetInvalid"));
+      if (!confirm(t("moderation.confirmMerge", { n: ids.length }))) return;
+      for (const sourceId of ids) {
+        const merged = await adminApi(
+          "/moderation/merge",
+          { sourceId, targetId },
+          "POST",
+        );
+        reports = reports.filter((r) => r.id !== sourceId);
+        const i = reports.findIndex((r) => r.id === merged.id);
+        if (i >= 0) reports[i] = { ...reports[i], ...merged };
+        else reports.unshift(merged);
+      }
+      toast(t("moderation.merged", { n: ids.length }));
+    } else {
+      const result = await adminApi(
+        "/moderation/bulk",
+        { ids, action },
+        "POST",
+      );
+      for (const row of result.results) {
+        if (row.skipped) continue;
+        const r = reports.find((x) => x.id === row.id);
+        if (r) r.hidden = row.hidden;
+      }
+      toast(
+        action === "hide"
+          ? t("moderation.bulkHidden", { n: result.results.length })
+          : t("moderation.bulkRestored", { n: result.results.length }),
+      );
+    }
+    lastDetailKey = null;
+    render();
+    await loadModerationQueue();
+  } catch (error) {
+    errorEl.textContent = error.message;
+  } finally {
+    bulkBtn.disabled = false;
   }
 });
 document

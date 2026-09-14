@@ -40,9 +40,11 @@ const en = {
     live: "● LIVE",
     tabNow: "Happening now",
     tabCleared: "Cleared",
+    tabStale: "Gone quiet",
     footer: "↗ Small updates. Smoother days.",
     countActive: "{count} active heads-ups · all mapped areas",
     countCleared: "{count} cleared reports · all mapped areas",
+    countStale: "{count} quiet reports · confirm one to bring it back",
     countError: "Could not load reports.",
   },
   empty: {
@@ -60,6 +62,7 @@ const en = {
     photoTitle: "Has a photo",
     newUpdates: "New updates on a report you follow",
     demo: "DEMO",
+    stale: "STALE",
   },
   map: {
     aria: "Map of San Francisco friction reports",
@@ -146,6 +149,11 @@ const en = {
       "Category-based estimate · {confirmations} confirmations · {votes}/2 clearance votes",
     voteConfirm: "Still here +1",
     voteClear: "✓ Looks clear",
+    resolve: "✓ Mark resolved",
+    edit: "✎ Edit",
+    stillThere: "Still there +1",
+    staleNotice:
+      "No updates in 30 days — this report went quiet. Passed by recently? Confirm it to bring it back.",
     communityCleared: "✓ The community marked this cleared.",
     saveOn: "★ Saved",
     saveOff: "☆ Save report",
@@ -213,6 +221,20 @@ const en = {
       formNote:
         "Similar reports within 90 meters may be merged. Reports are visible to everyone using this server.",
       submit: "Put it on the map ↗",
+    },
+    resolve: {
+      eyebrow: "CLOSE THE LOOP",
+      title: "Mark this resolved",
+      intro:
+        "Tell neighbors what changed. Everyone who confirmed this report will hear the good news.",
+      noteLabel: "What changed? (optional)",
+      notePh: "e.g. The elevator is back in service",
+      submit: "Mark resolved ✓",
+    },
+    edit: {
+      title: "Edit report",
+      windowNote: "You can edit a report within 24 hours of filing it.",
+      submit: "Save changes",
     },
     about: {
       eyebrow: "A SHARED PICTURE OF YOUR CITY",
@@ -330,6 +352,8 @@ const en = {
     flagCount: "Thanks. That's flag {n} of 3 to hide it.",
     reportMerged: "Merged with a nearby report. Your confirmation was added.",
     reportPosted: "Your heads-up is on the map. Thank you!",
+    resolved: "Marked resolved. Thanks for closing the loop!",
+    edited: "Report updated.",
     locationSelected:
       "Location selected. Choose “Report friction” to add a heads-up.",
     centeredHome: "Map centered on your location.",
@@ -415,6 +439,7 @@ const en = {
     kudos: "{n} thanks",
     comments: "{n} notes",
     clearedOn: "Cleared {age}",
+    editedOn: "Edited {age}",
   },
   moderation: {
     eyebrow: "KEEP IT HONEST",
@@ -433,6 +458,19 @@ const en = {
     deleted: "Report deleted.",
     hidden: "Report hidden.",
     restored: "Report restored.",
+    selectAria: "Select report",
+    hideSelected: "Hide selected",
+    restoreSelected: "Restore selected",
+    mergeSelected: "Merge into →",
+    mergeTargetPh: "Keep report ID…",
+    noneSelected: "Select at least one report first.",
+    mergeTargetInvalid:
+      "Enter the ID of the report to keep (different from the selected ones).",
+    confirmMerge:
+      "Merge {n} report(s) into the kept report? This can't be undone.",
+    merged: "{n} report(s) merged.",
+    bulkHidden: "{n} report(s) hidden.",
+    bulkRestored: "{n} report(s) restored.",
   },
   embed: {
     openFull: "Open full map ↗",
@@ -479,9 +517,11 @@ const es = {
     live: "● EN VIVO",
     tabNow: "Ocurriendo ahora",
     tabCleared: "Resueltos",
+    tabStale: "En silencio",
     footer: "↗ Pequeñas actualizaciones. Días más tranquilos.",
     countActive: "{count} avisos activos · en todas las zonas del mapa",
     countCleared: "{count} reportes resueltos · en todas las zonas del mapa",
+    countStale: "{count} reportes inactivos · confirma uno para reactivarlo",
     countError: "No se pudieron cargar los reportes.",
   },
   empty: {
@@ -500,6 +540,7 @@ const es = {
     photoTitle: "Tiene foto",
     newUpdates: "Novedades en un reporte que sigues",
     demo: "DEMO",
+    stale: "INACTIVO",
   },
   map: {
     aria: "Mapa de reportes de fricción de San Francisco",
@@ -587,6 +628,11 @@ const es = {
       "Estimación por categoría · {confirmations} confirmaciones · {votes}/2 votos de resolución",
     voteConfirm: "Sigue aquí +1",
     voteClear: "✓ Se ve despejado",
+    resolve: "✓ Marcar resuelto",
+    edit: "✎ Editar",
+    stillThere: "Sigue ahí +1",
+    staleNotice:
+      "Sin novedades en 30 días — este reporte se silenció. ¿Pasaste por aquí hace poco? Confírmalo para reactivarlo.",
     communityCleared: "✓ La comunidad lo marcó como resuelto.",
     saveOn: "★ Guardado",
     saveOff: "☆ Guardar reporte",
@@ -656,6 +702,21 @@ const es = {
       formNote:
         "Los reportes similares dentro de 90 metros pueden fusionarse. Los reportes son visibles para todos los que usan este servidor.",
       submit: "Ponerlo en el mapa ↗",
+    },
+    resolve: {
+      eyebrow: "CERRAR EL CICLO",
+      title: "Marcar como resuelto",
+      intro:
+        "Cuéntales a los vecinos qué cambió. Todos los que confirmaron este reporte recibirán la buena noticia.",
+      noteLabel: "¿Qué cambió? (opcional)",
+      notePh: "p. ej. El elevador volvió a funcionar",
+      submit: "Marcar resuelto ✓",
+    },
+    edit: {
+      title: "Editar reporte",
+      windowNote:
+        "Puedes editar un reporte dentro de las 24 horas de haberlo creado.",
+      submit: "Guardar cambios",
     },
     about: {
       eyebrow: "UNA IMAGEN COMPARTIDA DE TU CIUDAD",
@@ -777,6 +838,8 @@ const es = {
     reportMerged:
       "Fusionado con un reporte cercano. Se agregó tu confirmación.",
     reportPosted: "¡Tu aviso ya está en el mapa. Gracias!",
+    resolved: "Marcado como resuelto. ¡Gracias por cerrar el ciclo!",
+    edited: "Reporte actualizado.",
     locationSelected:
       "Ubicación seleccionada. Elige “Reportar un obstáculo” para agregar un aviso.",
     centeredHome: "Mapa centrado en tu ubicación.",
@@ -868,6 +931,7 @@ const es = {
     kudos: "{n} gracias",
     comments: "{n} notas",
     clearedOn: "Resuelto {age}",
+    editedOn: "Editado {age}",
   },
   moderation: {
     eyebrow: "MANTENER LA HONESTIDAD",
@@ -887,6 +951,19 @@ const es = {
     deleted: "Reporte eliminado.",
     hidden: "Reporte ocultado.",
     restored: "Reporte restaurado.",
+    selectAria: "Seleccionar reporte",
+    hideSelected: "Ocultar seleccionados",
+    restoreSelected: "Restaurar seleccionados",
+    mergeSelected: "Fusionar en →",
+    mergeTargetPh: "ID del reporte a conservar…",
+    noneSelected: "Selecciona al menos un reporte primero.",
+    mergeTargetInvalid:
+      "Ingresa el ID del reporte a conservar (distinto de los seleccionados).",
+    confirmMerge:
+      "¿Fusionar {n} reporte(s) en el reporte conservado? Esto no se puede deshacer.",
+    merged: "{n} reporte(s) fusionados.",
+    bulkHidden: "{n} reporte(s) ocultados.",
+    bulkRestored: "{n} reporte(s) restaurados.",
   },
   embed: {
     openFull: "Abrir mapa completo ↗",

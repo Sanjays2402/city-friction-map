@@ -145,6 +145,49 @@ export function validateFlag(body) {
   return reason;
 }
 export const HIDE_AFTER_FLAGS = 3;
+// A report with no activity for 30 days goes stale: it drops out of the
+// default views (but stays readable) until a neighbor re-confirms it.
+export const EXPIRY_MS = 30 * 86400000;
+export const EDIT_WINDOW_MS = 24 * 3600 * 1000;
+export function isExpired(report, now = Date.now()) {
+  return (
+    report.status === "active" &&
+    !report.hidden &&
+    now - report.updatedAt > EXPIRY_MS
+  );
+}
+export function validateResolution(body) {
+  const note = body && typeof body.note === "string" ? body.note.trim() : "";
+  if (note.length > 300)
+    throw new InputError("The resolution note is limited to 300 characters.");
+  return note;
+}
+export function validateEdit(body) {
+  if (!body || typeof body !== "object")
+    throw new InputError("Nothing to update.");
+  const patch = {};
+  if (body.description !== undefined) {
+    const description =
+      typeof body.description === "string" ? body.description.trim() : "";
+    if (description.length > 500)
+      throw new InputError("The description is limited to 500 characters.");
+    patch.description = description;
+  }
+  if (body.location !== undefined) {
+    const location =
+      typeof body.location === "string" ? body.location.trim() : "";
+    if (location.length < 3 || location.length > 100)
+      throw new InputError("The location must be 3–100 characters.");
+    patch.location = location;
+  }
+  if (body.category !== undefined) {
+    if (!Object.hasOwn(categories, body.category))
+      throw new InputError("Choose a valid category.");
+    patch.category = body.category;
+  }
+  if (!Object.keys(patch).length) throw new InputError("Nothing to update.");
+  return patch;
+}
 const SF_BOUNDS = { lat: [37.7, 37.84], lng: [-122.53, -122.35] };
 export function validateAlert(body) {
   if (!body || typeof body !== "object")

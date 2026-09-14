@@ -2,15 +2,19 @@ import { DatabaseSync } from "node:sqlite";
 import { randomUUID } from "node:crypto";
 import {
   HIDE_AFTER_FLAGS,
+  EDIT_WINDOW_MS,
   anonymize,
   categories,
   distance,
   findDuplicate,
+  isExpired,
   prediction,
   validateAlert,
   validateComment,
+  validateEdit,
   validateFlag,
   validateReport,
+  validateResolution,
 } from "./domain.js";
 import { InputError } from "./errors.js";
 import { levelFor, xpForStats } from "./gamify.js";
@@ -145,6 +149,19 @@ export function createStore(path = ":memory:", seed = true) {
       .c;
   const flagCountFor = (id) =>
     db.prepare("SELECT COUNT(*) AS c FROM flags WHERE report_id=?").get(id).c;
+  // Stale reports (no activity for 30 days) stay readable but drop out of
+  // the default views until a neighbor re-confirms them.
+  const withExpiry = (r, now = Date.now()) => ({
+    ...r,
+    expired: isExpired(r, now),
+  });
+  const confirmersOf = (reportId) =>
+    db
+      .prepare(
+        "SELECT DISTINCT visitor FROM votes WHERE report_id=? AND action='confirm'",
+      )
+      .all(reportId)
+      .map((row) => row.visitor);
   const transaction = (operation) => {
     db.exec("BEGIN IMMEDIATE");
     try {
@@ -295,11 +312,13 @@ export function createStore(path = ":memory:", seed = true) {
       const flags = flagCounts();
       const kudos = kudosCounts();
       const city = filter.city || null;
+      const now = Date.now();
       return all()
         .filter((r) => !city || (r.city || DEFAULT_CITY) === city)
+        .filter((r) => filter.includeExpired || !isExpired(r, now))
         .sort((a, b) => b.updatedAt - a.updatedAt)
         .map((r) => ({
-          ...r,
+          ...withExpiry(r, now),
           city: r.city || DEFAULT_CITY,
           hidden: !!r.hidden,
           flagCount: flags[r.id] || 0,
@@ -312,7 +331,7 @@ export function createStore(path = ":memory:", seed = true) {
       const r = all().find((r) => r.id === id);
       if (!r) throw new InputError("Report not found.", 404);
       return {
-        ...r,
+        ...withExpiry(r),
         city: r.city || DEFAULT_CITY,
         hidden: !!r.hidden,
         flagCount: flagCountFor(id),
@@ -383,7 +402,11 @@ export function createStore(path = ":memory:", seed = true) {
         }
       });
       return {
-        report: { ...report, commentCount: 0, prediction: prediction(report) },
+        report: {
+          ...withExpiry(report),
+          commentCount: 0,
+          prediction: prediction(report),
+        },
         merged: false,
       };
     },
@@ -398,15 +421,36 @@ export function createStore(path = ":memory:", seed = true) {
             "This report is hidden while under review.",
             409,
           );
+        const expired = isExpired(r);
         if (r.status !== "active")
           throw new InputError("This report has already cleared.", 409);
+        if (expired && action !== "confirm")
+          throw new InputError(
+            "This report went stale. Confirm it to bring it back.",
+            409,
+          );
         const insert = db
           .prepare("INSERT OR IGNORE INTO votes VALUES (?,?,?,?)")
           .run(id, visitor, action, Date.now());
-        if (!insert.changes)
+        if (!insert.changes) {
+          if (expired && action === "confirm") {
+            // Already confirmed once: a fresh "still there" from the same
+            // neighbor still counts as activity, reviving the report without
+            // double-counting their confirmation.
+            r.updatedAt = Date.now();
+            save(r);
+            const commentCount = commentCountFor(r.id);
+            return {
+              ...withExpiry(r),
+              commentCount,
+              prediction: prediction(r),
+            };
+          }
           throw new InputError("You already sent this update.", 409);
+        }
         if (action === "confirm") {
           r.confirmations++;
+          // A fresh confirmation revives a stale report.
           r.updatedAt = Date.now();
         } else {
           r.clearVotes++;
@@ -425,7 +469,7 @@ export function createStore(path = ":memory:", seed = true) {
         }
         save(r);
         const commentCount = commentCountFor(r.id);
-        return { ...r, commentCount, prediction: prediction(r) };
+        return { ...withExpiry(r), commentCount, prediction: prediction(r) };
       });
     },
     flag(reportId, visitor, reason) {
@@ -466,6 +510,148 @@ export function createStore(path = ":memory:", seed = true) {
         r.hidden = action === "hide";
         save(r);
         return { id, hidden: r.hidden, flagCount: flagCountFor(id) };
+      });
+    },
+    // The author (or a moderator) marks the friction gone, with an
+    // optional note about what changed. Everyone who confirmed it hears
+    // the good news.
+    resolveReport(id, visitor, body, isAdmin = false) {
+      const note = validateResolution(body);
+      return transaction(() => {
+        const r = all().find((r) => r.id === id);
+        if (!r) throw new InputError("Report not found.", 404);
+        if (r.hidden)
+          throw new InputError(
+            "This report is hidden while under review.",
+            409,
+          );
+        if (r.status !== "active")
+          throw new InputError("This report is already resolved.", 409);
+        if (!isAdmin && r.creator !== visitor)
+          throw new InputError("Only the author can resolve this report.", 403);
+        r.status = "resolved";
+        r.resolvedAt = Date.now();
+        r.updatedAt = r.resolvedAt;
+        if (note) r.resolvedNote = note;
+        save(r);
+        const seen = new Set([visitor]);
+        for (const confirmer of confirmersOf(id)) {
+          if (seen.has(confirmer)) continue;
+          seen.add(confirmer);
+          notify(confirmer, {
+            type: "resolved",
+            title: "A report you confirmed was fixed",
+            body: `${r.title} · ${r.location}`,
+            reportId: r.id,
+            city: r.city || DEFAULT_CITY,
+          });
+        }
+        // The author hears about it when a moderator resolves their report;
+        // resolving your own needs no announcement.
+        if (r.creator && r.creator !== visitor)
+          notify(r.creator, {
+            type: "resolved",
+            title: "Your report was marked resolved",
+            body: `${r.title} · ${r.location}`,
+            reportId: r.id,
+            city: r.city || DEFAULT_CITY,
+          });
+        return { ...withExpiry(r), commentCount: commentCountFor(id) };
+      });
+    },
+    // The author can fix a typo or sharpen the details within a day of
+    // filing. After that the record is history — file a new report.
+    editReport(id, visitor, body) {
+      const patch = validateEdit(body);
+      return transaction(() => {
+        const r = all().find((r) => r.id === id);
+        if (!r) throw new InputError("Report not found.", 404);
+        if (r.hidden)
+          throw new InputError(
+            "This report is hidden while under review.",
+            409,
+          );
+        if (r.status !== "active")
+          throw new InputError("Resolved reports can't be edited.", 409);
+        if (r.creator !== visitor)
+          throw new InputError("Only the author can edit this report.", 403);
+        if (Date.now() - r.createdAt > EDIT_WINDOW_MS)
+          throw new InputError(
+            "Reports can only be edited within 24 hours of filing.",
+            403,
+          );
+        Object.assign(r, patch);
+        r.editedAt = Date.now();
+        r.updatedAt = r.editedAt;
+        save(r);
+        return { ...withExpiry(r), commentCount: commentCountFor(id) };
+      });
+    },
+    // Hide or restore several flagged reports in one moderator action.
+    bulkModerate(ids, action) {
+      if (!["hide", "restore"].includes(action))
+        throw new InputError("Unknown moderation action.");
+      if (!Array.isArray(ids) || !ids.length)
+        throw new InputError("Choose at least one report.");
+      return transaction(() => {
+        const results = [];
+        for (const id of new Set(ids.filter((x) => typeof x === "string"))) {
+          const r = all().find((r) => r.id === id);
+          if (!r) {
+            results.push({ id, skipped: true });
+            continue;
+          }
+          r.hidden = action === "hide";
+          save(r);
+          results.push({ id, hidden: r.hidden });
+        }
+        return { action, results };
+      });
+    },
+    // Fold a duplicate report into its canonical twin: confirmations,
+    // votes, notes, kudos, and flags move over, then the duplicate goes.
+    mergeReports(sourceId, targetId) {
+      if (sourceId === targetId)
+        throw new InputError("A report can't be merged into itself.");
+      return transaction(() => {
+        const reports = all();
+        const source = reports.find((r) => r.id === sourceId);
+        const target = reports.find((r) => r.id === targetId);
+        if (!source || !target) throw new InputError("Report not found.", 404);
+        if (target.status !== "active")
+          throw new InputError("Merge into an active report.", 409);
+        db.prepare(
+          "INSERT OR IGNORE INTO votes (report_id, visitor, action, created_at) SELECT ?, visitor, action, created_at FROM votes WHERE report_id=?",
+        ).run(targetId, sourceId);
+        db.prepare("UPDATE comments SET report_id=? WHERE report_id=?").run(
+          targetId,
+          sourceId,
+        );
+        db.prepare(
+          "INSERT OR IGNORE INTO kudos (report_id, visitor, created_at) SELECT ?, visitor, created_at FROM kudos WHERE report_id=?",
+        ).run(targetId, sourceId);
+        db.prepare(
+          "INSERT OR IGNORE INTO flags (report_id, visitor, reason, created_at) SELECT ?, visitor, reason, created_at FROM flags WHERE report_id=?",
+        ).run(targetId, sourceId);
+        target.confirmations = db
+          .prepare(
+            "SELECT COUNT(*) AS c FROM votes WHERE report_id=? AND action='confirm'",
+          )
+          .get(targetId).c;
+        target.clearVotes = db
+          .prepare(
+            "SELECT COUNT(*) AS c FROM votes WHERE report_id=? AND action='clear'",
+          )
+          .get(targetId).c;
+        target.updatedAt = Math.max(target.updatedAt, source.updatedAt);
+        save(target);
+        db.prepare("DELETE FROM reports WHERE id=?").run(sourceId);
+        for (const table of ["votes", "comments", "flags", "kudos"])
+          db.prepare(`DELETE FROM ${table} WHERE report_id=?`).run(sourceId);
+        return {
+          ...withExpiry(this.get(targetId)),
+          merged: sourceId,
+        };
       });
     },
     // Reports carrying flags, newest first — the moderation queue.
@@ -728,7 +914,10 @@ export function createStore(path = ":memory:", seed = true) {
       return { id, deleted: true };
     },
     alertMatches(visitor) {
-      const active = all().filter((r) => r.status === "active" && !r.hidden);
+      const now = Date.now();
+      const active = all().filter(
+        (r) => r.status === "active" && !r.hidden && !isExpired(r, now),
+      );
       return this.listAlerts(visitor).map((zone) => {
         const zoneCity = zone.city || DEFAULT_CITY;
         const matches = [];
@@ -920,7 +1109,7 @@ export function createStore(path = ":memory:", seed = true) {
           resolved++;
           if (r.resolvedAt > r.createdAt)
             resolutionMinutes.push((r.resolvedAt - r.createdAt) / 60000);
-        } else if (!r.hidden) active++;
+        } else if (!r.hidden && !isExpired(r, now)) active++;
         if (r.createdAt >= now - 14 * dayMs)
           for (const b of buckets)
             if (r.createdAt >= b.start && r.createdAt < b.end) {

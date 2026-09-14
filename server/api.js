@@ -26,24 +26,27 @@ export function createApi(store, options = {}) {
       }),
   });
   api.use((req, res, next) =>
-    ["POST", "DELETE"].includes(req.method)
+    ["POST", "PATCH", "DELETE"].includes(req.method)
       ? writeLimit(req, res, next)
       : next(),
   );
   const adminToken = options.adminToken || "";
-  const requireAdmin = (req, res, next) => {
+  const checkAdmin = (req) => {
     const presented = Buffer.from(req.get("x-admin-token") || "", "utf8");
     const expected = Buffer.from(adminToken, "utf8");
-    if (
-      !adminToken ||
-      presented.length !== expected.length ||
-      !timingSafeEqual(presented, expected)
-    )
+    return (
+      !!adminToken &&
+      presented.length === expected.length &&
+      timingSafeEqual(presented, expected)
+    );
+  };
+  const requireAdmin = (req, res, next) => {
+    if (!checkAdmin(req))
       return res.status(403).json({ error: "Moderation is restricted." });
     next();
   };
   api.use((req, res, next) => {
-    if (!["POST", "DELETE"].includes(req.method)) return next();
+    if (!["POST", "PATCH", "DELETE"].includes(req.method)) return next();
     const origin = req.get("origin");
     if (origin) {
       let parsed;
@@ -61,7 +64,7 @@ export function createApi(store, options = {}) {
           .json({ error: "Cross-origin writes are disabled." });
       }
     }
-    if (req.method === "POST" && !req.is("application/json")) {
+    if (["POST", "PATCH"].includes(req.method) && !req.is("application/json")) {
       return res
         .status(415)
         .json({ error: "Send an application/json request." });
@@ -79,7 +82,14 @@ export function createApi(store, options = {}) {
       throw Object.assign(new Error("Unknown city."), { status: 400 });
     return city ? { city } : {};
   };
-  api.get("/reports", (req, res) => res.json(store.list(cityFilter(req))));
+  api.get("/reports", (req, res) =>
+    res.json(
+      store.list({
+        ...cityFilter(req),
+        includeExpired: req.query.includeExpired === "1",
+      }),
+    ),
+  );
   api.get("/reports/similar", (req, res) => {
     const lat = Number(req.query.lat),
       lng = Number(req.query.lng);
@@ -108,8 +118,29 @@ export function createApi(store, options = {}) {
   api.post("/reports/:id/kudos", (req, res) => {
     res.json(store.toggleKudos(req.params.id, req.get("x-visitor-id")));
   });
+  api.post("/reports/:id/resolve", (req, res) => {
+    res.json(
+      store.resolveReport(
+        req.params.id,
+        req.get("x-visitor-id"),
+        req.body,
+        checkAdmin(req),
+      ),
+    );
+  });
+  api.patch("/reports/:id", (req, res) => {
+    res.json(
+      store.editReport(req.params.id, req.get("x-visitor-id"), req.body),
+    );
+  });
   api.post("/reports/:id/moderate", requireAdmin, (req, res) => {
     res.json(store.moderate(req.params.id, req.body?.action));
+  });
+  api.post("/moderation/bulk", requireAdmin, (req, res) => {
+    res.json(store.bulkModerate(req.body?.ids, req.body?.action));
+  });
+  api.post("/moderation/merge", requireAdmin, (req, res) => {
+    res.json(store.mergeReports(req.body?.sourceId, req.body?.targetId));
   });
   api.get("/moderation/flags", requireAdmin, (req, res) => {
     res.json(store.flaggedReports());
@@ -163,7 +194,7 @@ export function createApi(store, options = {}) {
     const cityName = filter.city ? cityById(filter.city).name : "All cities";
     const items = store
       .list(filter)
-      .filter((r) => !r.hidden && r.status === "active")
+      .filter((r) => !r.hidden && r.status === "active" && !r.expired)
       .slice(0, 20);
     const esc = (s) =>
       String(s ?? "")

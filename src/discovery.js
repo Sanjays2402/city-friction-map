@@ -26,11 +26,14 @@ export function filterReports(
 }
 
 export function summarize(reports) {
-  const active = reports.filter((r) => r.status === "active");
+  // Expired reports keep status "active" but aren't live heads-ups — they
+  // get their own bucket so the stale tab can't inflate the active count.
+  const live = reports.filter((r) => r.status === "active" && !r.expired);
+  const expired = reports.filter((r) => r.expired).length;
   return {
-    active: active.length,
-    major: active.filter((r) => r.severity === 3).length,
-    stale: active.filter((r) => r.prediction.minutes === null).length,
+    active: live.length,
+    major: live.filter((r) => r.severity === 3).length,
+    stale: expired || live.filter((r) => r.prediction.minutes === null).length,
     resolved: reports.filter((r) => r.status === "resolved").length,
   };
 }

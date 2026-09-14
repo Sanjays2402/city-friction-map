@@ -193,6 +193,15 @@ test("summary counts active impact and stale reports separately from resolved", 
     resolved: 1,
   });
 });
+test("summary keeps expired reports out of the live counts", () => {
+  const quiet = { ...rows[0], expired: true };
+  assert.deepEqual(summarize([quiet, ...rows.slice(1)]), {
+    active: 1,
+    major: 1,
+    stale: 1,
+    resolved: 1,
+  });
+});
 test("saved reports tolerate corrupt or unavailable storage", () => {
   assert.equal(readSaved({ getItem: () => "{" }).size, 0);
   assert.equal(readSaved({ getItem: () => '{"id":1}' }).size, 0);
