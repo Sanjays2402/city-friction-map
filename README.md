@@ -14,34 +14,38 @@ Live layers pull in real bike-share status, 311 cases, weather, air quality, and
 
 ## Features
 
-| Explore                                   | Contribute                              | Keep track                                    |
-| ----------------------------------------- | --------------------------------------- | --------------------------------------------- |
-| Interactive map with six categories       | Submit a report at a chosen location    | Save reports on your device                   |
-| Search places and report text             | Merge nearby duplicate reports          | Open an issue from a shareable link           |
-| Filter major obstacles or hide demo data  | Confirm an obstacle or vote it cleared  | View active, major, stale, and cleared counts |
-| Sort by recency, impact, or confirmations | Two clearance votes resolve an issue    | See explainable clearance ranges              |
-| Follow reports for update notifications   | Leave neighbor notes on any report      | Export the filtered list as CSV               |
-| Filter to followed reports only           | Attach a compressed photo to a report   | See comment and photo badges on cards         |
-| Flag misleading reports for review        | Smarter duplicate merging by headline   | Community flags hide misleading reports       |
-| React “helpful” on useful neighbor notes  | Reply to neighbor notes (one level)     | Watch areas for new friction with alert zones |
-| See the most active neighbors             |                                         |                                               |
-| Check friction along a planned route      | Toggle a severity heatmap               | See 14-day trends and averages                |
-| Drag trip stops to fine-tune the route    | Time-filter the heatmap (24h / 7d)      | Draw alert zones by dragging on the map       |
-| Toggle live Bay Wheels dock availability  | Toggle live SF 311 cases on the map     | See live SF weather in the header             |
-| Click a station to report empty docks     | Add a 311 case as a report in one click | See live AQI next to the weather              |
-| Filter 311 cases by top case types        | Toggle live NWS weather alerts          | Adjust enrichment layer opacity               |
-| Rich marker popups with photos and notes  |                                         |                                               |
-| Earn XP, levels, badges, and streaks      | Take the weekly confirmation challenge  | See level icons on the leaderboard            |
-| Export reports as GeoJSON                 | Import a GeoJSON FeatureCollection      |                                               |
-| Keyboard shortcuts for power users        | Installable PWA with offline shell      |                                               |
-| **New in v1.6.0**                         |                                         |                                               |
-| Attach compressed photo evidence to reports | Duplicate preview before filing ("already reported?") | Thank reporters with kudos (+1 XP each) |
-| Freshness badges on new reports           | Report activity timelines               | Moderation queue for flagged reports (admin token) |
-| Embeddable `/embed?city=` map for iframes  | Public RSS feed at `/api/feed.xml`       | Print-friendly shared report pages            |
-| **New in v1.5.0**                         |                                         |                                               |
-| Switch between San Francisco, Seattle, and New York | City-scoped reports, alerts, and live data | Notification center with unread badge  |
-| Dark mode with system preference detection | Full Spanish translation                | Offline report queue with automatic sync       |
-| Shareable `/r/:id` report links           |                                         |                                               |
+| Explore                                             | Contribute                                            | Keep track                                         |
+| --------------------------------------------------- | ----------------------------------------------------- | -------------------------------------------------- |
+| Interactive map with six categories                 | Submit a report at a chosen location                  | Save reports on your device                        |
+| Search places and report text                       | Merge nearby duplicate reports                        | Open an issue from a shareable link                |
+| Filter major obstacles or hide demo data            | Confirm an obstacle or vote it cleared                | View active, major, stale, and cleared counts      |
+| Sort by recency, impact, or confirmations           | Two clearance votes resolve an issue                  | See explainable clearance ranges                   |
+| Follow reports for update notifications             | Leave neighbor notes on any report                    | Export the filtered list as CSV                    |
+| Filter to followed reports only                     | Attach a compressed photo to a report                 | See comment and photo badges on cards              |
+| Flag misleading reports for review                  | Smarter duplicate merging by headline                 | Community flags hide misleading reports            |
+| React “helpful” on useful neighbor notes            | Reply to neighbor notes (one level)                   | Watch areas for new friction with alert zones      |
+| See the most active neighbors                       |                                                       |                                                    |
+| Check friction along a planned route                | Toggle a severity heatmap                             | See 14-day trends and averages                     |
+| Drag trip stops to fine-tune the route              | Time-filter the heatmap (24h / 7d)                    | Draw alert zones by dragging on the map            |
+| Toggle live Bay Wheels dock availability            | Toggle live SF 311 cases on the map                   | See live SF weather in the header                  |
+| Click a station to report empty docks               | Add a 311 case as a report in one click               | See live AQI next to the weather                   |
+| Filter 311 cases by top case types                  | Toggle live NWS weather alerts                        | Adjust enrichment layer opacity                    |
+| Rich marker popups with photos and notes            |                                                       |                                                    |
+| Earn XP, levels, badges, and streaks                | Take the weekly confirmation challenge                | See level icons on the leaderboard                 |
+| Export reports as GeoJSON                           | Import a GeoJSON FeatureCollection                    |                                                    |
+| Keyboard shortcuts for power users                  | Installable PWA with offline shell                    |                                                    |
+| **New in v1.7.0**                                   |                                                       |                                                    |
+| Resolve your report with an optional note           | Edit your report within 24 hours                      | "Gone quiet" tab for stale reports                 |
+| Moderators can also resolve reports                 | Bulk hide/restore in the moderation queue             | Confirm a quiet report to revive it                |
+| Merge duplicates into a canonical report            | Resolution notes in the activity timeline             | Shared links open stale reports directly           |
+| **New in v1.6.0**                                   |                                                       |                                                    |
+| Attach compressed photo evidence to reports         | Duplicate preview before filing ("already reported?") | Thank reporters with kudos (+1 XP each)            |
+| Freshness badges on new reports                     | Report activity timelines                             | Moderation queue for flagged reports (admin token) |
+| Embeddable `/embed?city=` map for iframes           | Public RSS feed at `/api/feed.xml`                    | Print-friendly shared report pages                 |
+| **New in v1.5.0**                                   |                                                       |                                                    |
+| Switch between San Francisco, Seattle, and New York | City-scoped reports, alerts, and live data            | Notification center with unread badge              |
+| Dark mode with system preference detection          | Full Spanish translation                              | Offline report queue with automatic sync           |
+| Shareable `/r/:id` report links                     |                                                       |                                                    |
 
 Reports persist in SQLite and refresh across browsers every 15 seconds. The responsive interface supports desktop and mobile.
 
@@ -116,11 +120,11 @@ npx playwright install chromium
 npm run test:e2e
 ```
 
-The suite covers report validation, geographic matching, vote conflicts, database persistence and rollback, filtering, saved reports, shared links, and mobile layout. Browser tests build and exercise the production app. GitHub Actions runs verification on every push and pull request.
+The suite covers report validation, geographic matching, vote conflicts, database persistence and rollback, filtering, saved reports, shared links, resolution and editing, the stale-expiry lifecycle, bulk moderation and duplicate merging, and mobile layout. Browser tests build and exercise the production app. GitHub Actions runs verification on every push and pull request.
 
 ## Project scope
 
-This is a working portfolio MVP scoped to San Francisco. Demo reports are fictional; clearance estimates are heuristics, not guarantees. Saved reports are browser-local, and shared links require access to the same server. Anonymous browser IDs are not verified identities. Public deployment would still need real authentication, a suitable tile provider, and an `ADMIN_TOKEN` for the moderation endpoints.
+This is a working portfolio MVP, currently covering San Francisco, Seattle, and New York. Demo reports are fictional; clearance estimates are heuristics, not guarantees. Saved reports are browser-local, and shared links require access to the same server. Anonymous browser IDs are not verified identities. Public deployment would still need real authentication, a suitable tile provider, and an `ADMIN_TOKEN` for the moderation endpoints.
 
 ## Credits
 
