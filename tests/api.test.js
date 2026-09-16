@@ -173,3 +173,28 @@ test("reports accept an optional photo URL", async (t) => {
   });
   assert.equal(badPhoto.status, 400);
 });
+
+test("report listing supports text search with ?q=", async (t) => {
+  const { base, request } = await fixture(t);
+  assert.equal((await request("/reports", report)).status, 201);
+  assert.equal(
+    (
+      await request("/reports", {
+        ...report,
+        title: "Broken elevator",
+        location: "Union Square",
+        lat: 37.79,
+      })
+    ).status,
+    201,
+  );
+  const match = await (await fetch(base + "/api/reports?q=elevator")).json();
+  assert.equal(match.length, 1);
+  assert.equal(match[0].title, "Broken elevator");
+  const caseInsensitive = await (
+    await fetch(base + "/api/reports?q=UNION")
+  ).json();
+  assert.equal(caseInsensitive.length, 1);
+  const none = await (await fetch(base + "/api/reports?q=nowhere")).json();
+  assert.equal(none.length, 0);
+});

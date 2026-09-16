@@ -87,6 +87,7 @@ export function createApi(store, options = {}) {
       store.list({
         ...cityFilter(req),
         includeExpired: req.query.includeExpired === "1",
+        q: req.query.q,
       }),
     ),
   );

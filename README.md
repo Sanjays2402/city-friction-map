@@ -49,6 +49,8 @@ Live layers pull in real bike-share status, 311 cases, weather, air quality, and
 
 Reports persist in SQLite and refresh across browsers every 15 seconds. The responsive interface supports desktop and mobile.
 
+The API supports text search across titles, locations, and descriptions: `GET /api/reports?q=elevator`.
+
 Live enrichment layers (bike-share status, 311 cases, Open-Meteo weather and air quality, NWS weather alerts) come from free keyless public APIs through cached server proxies, scoped to the selected city; when an upstream is down, its toggle quietly stands down instead of showing dead data.
 
 ## Screenshots

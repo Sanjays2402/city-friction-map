@@ -4,18 +4,18 @@
 
 The browser loads a Vite bundle and requests reports from Express. Leaflet displays the geographic data; discovery filters and sorting run locally. New reports and verification votes go through the same-origin JSON API into SQLite. Connected browsers poll every 15 seconds.
 
-| Location           | Responsibility                                                                                 |
-| ------------------ | ---------------------------------------------------------------------------------------------- |
-| `src/main.js`      | Map, report form, URL selection, saved reports, following, comments, and rendering             |
+| Location           | Responsibility                                                                                  |
+| ------------------ | ----------------------------------------------------------------------------------------------- |
+| `src/main.js`      | Map, report form, URL selection, saved reports, following, comments, and rendering              |
 | `src/enrich.js`    | Pure live-data helpers: WMO weather labels, dock/case/alert marker colors, 311→category mapping |
 | `server/enrich.js` | Cached proxies for Bay Wheels, SF 311, Open-Meteo weather/AQI, NWS alerts (60s TTL, 8s timeout) |
-| `server/gamify.js` | Pure gamification math: XP, levels, badges, streaks, weekly challenge — no schema changes        |
-| `src/discovery.js` | Pure filtering, sorting, summary, follow-update detection, CSV export, and saved-state parsing |
-| `src/style.css`    | Responsive interface                                                                           |
-| `server/api.js`    | HTTP validation, status codes, and endpoint routing                                            |
-| `server/domain.js` | Categories, input rules, geographic distance, and predictions                                  |
-| `server/store.js`  | Persistent reports, uniqueness constraints, and transactions                                   |
-| `tests/`           | Domain, HTTP, persistence, and production browser tests                                        |
+| `server/gamify.js` | Pure gamification math: XP, levels, badges, streaks, weekly challenge — no schema changes       |
+| `src/discovery.js` | Pure filtering, sorting, summary, follow-update detection, CSV export, and saved-state parsing  |
+| `src/style.css`    | Responsive interface                                                                            |
+| `server/api.js`    | HTTP validation, status codes, and endpoint routing                                             |
+| `server/domain.js` | Categories, input rules, geographic distance, and predictions                                   |
+| `server/store.js`  | Persistent reports, uniqueness constraints, and transactions                                    |
+| `tests/`           | Domain, HTTP, persistence, and production browser tests                                         |
 
 ## Duplicate detection
 
@@ -104,34 +104,34 @@ The "Export CSV" control downloads the currently filtered report list (respectin
 
 ## API
 
-| Method | Endpoint                    | Behavior                                              |
-| ------ | --------------------------- | ----------------------------------------------------- |
-| GET    | `/api/health`               | Health check                                          |
-| GET    | `/api/reports`              | Reports with derived estimates and note counts        |
-| POST   | `/api/reports`              | Create (201) or merge (200)                           |
-| POST   | `/api/reports/:id/vote`     | Confirm or submit clearance                           |
-| GET    | `/api/reports/:id/comments` | Notes for a report, oldest first (with replies)       |
-| POST   | `/api/reports/:id/comments` | Add a note or a reply with `{body, parentId}` (201)   |
-| POST   | `/api/comments/:id/react`   | Toggle a “helpful” reaction on a note                 |
-| GET    | `/api/alerts`               | This visitor’s alert zones                            |
-| POST   | `/api/alerts`               | Create a named watch zone (201)                       |
-| DELETE | `/api/alerts/:id`           | Remove an alert zone (owner only)                     |
-| GET    | `/api/alerts/matches`       | Zones with active reports inside each                 |
-| GET    | `/api/contributors`         | Top 20 neighbors by weighted activity                 |
-| GET    | `/api/trends`               | 14-day category counts, resolution avg, totals        |
-| GET    | `/api/reports/:id`          | One report, including hidden ones (404 when missing)  |
-| GET    | `/api/enrich/bikeshare`     | Bay Wheels SF stations with live dock counts          |
-| GET    | `/api/enrich/cases311`      | 100 most recent SF 311 cases                          |
-| GET    | `/api/enrich/weather`       | Current SF temperature, conditions, and wind          |
-| GET    | `/api/enrich/airquality`    | SF US AQI, EPA label, PM2.5                           |
-| GET    | `/api/enrich/alerts`        | Active NWS alerts for SF (max 5, projected)           |
-| GET    | `/api/gamification/me`      | XP, level, streak, badges, weekly challenge           |
-| POST   | `/api/reports/:id/flag`     | Flag a report; hides at 3 distinct-visitor flags      |
-| POST   | `/api/reports/:id/moderate` | `hide`, `restore`, or `delete` (admin token required) |
-| POST   | `/api/reports/:id/kudos`    | Thank a report's author (toggle per visitor)          |
-| GET    | `/api/reports/similar`      | Nearby same-category candidates (`lat`, `lng`, `category`, `city`) |
-| GET    | `/api/moderation/flags`     | Flagged reports with reasons (admin token required)   |
-| GET    | `/api/feed.xml`             | RSS feed of the 20 most recent active reports (`city`) |
+| Method | Endpoint                    | Behavior                                                                                           |
+| ------ | --------------------------- | -------------------------------------------------------------------------------------------------- |
+| GET    | `/api/health`               | Health check                                                                                       |
+| GET    | `/api/reports`              | Reports with derived estimates and note counts; `?q=` searches titles, locations, and descriptions |
+| POST   | `/api/reports`              | Create (201) or merge (200)                                                                        |
+| POST   | `/api/reports/:id/vote`     | Confirm or submit clearance                                                                        |
+| GET    | `/api/reports/:id/comments` | Notes for a report, oldest first (with replies)                                                    |
+| POST   | `/api/reports/:id/comments` | Add a note or a reply with `{body, parentId}` (201)                                                |
+| POST   | `/api/comments/:id/react`   | Toggle a “helpful” reaction on a note                                                              |
+| GET    | `/api/alerts`               | This visitor’s alert zones                                                                         |
+| POST   | `/api/alerts`               | Create a named watch zone (201)                                                                    |
+| DELETE | `/api/alerts/:id`           | Remove an alert zone (owner only)                                                                  |
+| GET    | `/api/alerts/matches`       | Zones with active reports inside each                                                              |
+| GET    | `/api/contributors`         | Top 20 neighbors by weighted activity                                                              |
+| GET    | `/api/trends`               | 14-day category counts, resolution avg, totals                                                     |
+| GET    | `/api/reports/:id`          | One report, including hidden ones (404 when missing)                                               |
+| GET    | `/api/enrich/bikeshare`     | Bay Wheels SF stations with live dock counts                                                       |
+| GET    | `/api/enrich/cases311`      | 100 most recent SF 311 cases                                                                       |
+| GET    | `/api/enrich/weather`       | Current SF temperature, conditions, and wind                                                       |
+| GET    | `/api/enrich/airquality`    | SF US AQI, EPA label, PM2.5                                                                        |
+| GET    | `/api/enrich/alerts`        | Active NWS alerts for SF (max 5, projected)                                                        |
+| GET    | `/api/gamification/me`      | XP, level, streak, badges, weekly challenge                                                        |
+| POST   | `/api/reports/:id/flag`     | Flag a report; hides at 3 distinct-visitor flags                                                   |
+| POST   | `/api/reports/:id/moderate` | `hide`, `restore`, or `delete` (admin token required)                                              |
+| POST   | `/api/reports/:id/kudos`    | Thank a report's author (toggle per visitor)                                                       |
+| GET    | `/api/reports/similar`      | Nearby same-category candidates (`lat`, `lng`, `category`, `city`)                                 |
+| GET    | `/api/moderation/flags`     | Flagged reports with reasons (admin token required)                                                |
+| GET    | `/api/feed.xml`             | RSS feed of the 20 most recent active reports (`city`)                                             |
 
 Writes require JSON and an `X-Visitor-Id` header containing 12–80 letters, numbers, or hyphens. Report fields are `category`, `title`, `location`, `description`, `photoUrl` (optional), `photo` (optional inline JPEG/PNG/WebP data URL, ≤350 KB), `lat`, `lng`, and `severity` (1–3). Vote bodies use `{"action":"confirm"}` or `{"action":"clear"}`. Note bodies use `{"body":"…"}` (1–300 characters).
 

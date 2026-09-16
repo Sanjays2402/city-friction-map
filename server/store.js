@@ -312,10 +312,22 @@ export function createStore(path = ":memory:", seed = true) {
       const flags = flagCounts();
       const kudos = kudosCounts();
       const city = filter.city || null;
+      const q = String(filter.q ?? "")
+        .trim()
+        .toLowerCase();
       const now = Date.now();
       return all()
         .filter((r) => !city || (r.city || DEFAULT_CITY) === city)
         .filter((r) => filter.includeExpired || !isExpired(r, now))
+        .filter(
+          (r) =>
+            !q ||
+            r.title.toLowerCase().includes(q) ||
+            r.location.toLowerCase().includes(q) ||
+            String(r.description || "")
+              .toLowerCase()
+              .includes(q),
+        )
         .sort((a, b) => b.updatedAt - a.updatedAt)
         .map((r) => ({
           ...withExpiry(r, now),
