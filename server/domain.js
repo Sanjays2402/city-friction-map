@@ -88,6 +88,7 @@ export function validateReport(body) {
     description: body.description.trim(),
     photoUrl,
     photo,
+    stepFree: body.stepFree === true,
   };
 }
 export function validateComment(body) {
@@ -184,6 +185,9 @@ export function validateEdit(body) {
     if (!Object.hasOwn(categories, body.category))
       throw new InputError("Choose a valid category.");
     patch.category = body.category;
+  }
+  if (body.stepFree !== undefined) {
+    patch.stepFree = body.stepFree === true;
   }
   if (!Object.keys(patch).length) throw new InputError("Nothing to update.");
   return patch;

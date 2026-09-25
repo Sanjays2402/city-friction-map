@@ -374,6 +374,7 @@ export function createStore(path = ":memory:", seed = true) {
             "description",
             "photoUrl",
             "photo",
+            "stepFree",
             "lat",
             "lng",
             "severity",

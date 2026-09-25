@@ -16,6 +16,7 @@ export function filterReports(
       (filters.category === "all" || r.category === filters.category) &&
       (!filters.majorOnly || r.severity === 3) &&
       (!filters.hideDemo || !r.demo) &&
+      (!filters.stepFreeOnly || r.stepFree) &&
       (!filters.savedOnly || saved.has(r.id)) &&
       (!filters.followedOnly || followed.has(r.id)) &&
       (!r.hidden || filters.includeHidden) &&
@@ -40,16 +41,20 @@ export function filterReports(
   });
 }
 
-export function summarize(reports) {
+export function summarize(reports, now = Date.now()) {
   // Expired reports keep status "active" but aren't live heads-ups — they
   // get their own bucket so the stale tab can't inflate the active count.
   const live = reports.filter((r) => r.status === "active" && !r.expired);
   const expired = reports.filter((r) => r.expired).length;
+  const weekMs = 7 * 24 * 3600 * 1000;
   return {
     active: live.length,
     major: live.filter((r) => r.severity === 3).length,
     stale: expired || live.filter((r) => r.prediction.minutes === null).length,
     resolved: reports.filter((r) => r.status === "resolved").length,
+    clearedWeek: reports.filter(
+      (r) => r.status === "resolved" && now - r.updatedAt <= weekMs,
+    ).length,
   };
 }
 

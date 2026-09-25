@@ -90,6 +90,7 @@ let majorOnly = false,
   savedOnly = false,
   followedOnly = false,
   areaOnly = false,
+  stepFreeOnly = false,
   maxAgeHours = 0,
   userLoc = null,
   sort = "recent";
@@ -100,7 +101,7 @@ let initialReport = deepLink
 let lastDetailKey = null,
   commentsFor = null;
 $("#app").innerHTML = `
-<header><a class="brand" href="/" aria-label="${t("header.brandAria")}"><span class="brand-icon">↗</span> city<span>friction</span><sup id="brand-city">${escape(city.short)}</sup></a><nav><span class="nav-active">${t("header.navExplore")}</span><button id="about">${t("header.about")} ↗</button></nav><span id="city-slot"></span><span id="notify-slot"></span><select id="lang-select" aria-label="Language">${SUPPORTED_LANGS.map((l) => `<option value="${l.id}"${l.id === currentLang() ? " selected" : ""}>${l.label}</option>`).join("")}</select><button id="theme-toggle" class="icon-button" aria-label="Toggle dark mode">🌙</button><span id="offline-pill" class="offline-pill" hidden></span><button id="you-chip" class="you-chip" hidden aria-label="${t("header.profileAria")}"><span id="you-icon">🌱</span><span id="you-name">${t("header.newcomer")}</span><span class="xp-track"><span id="you-xp" class="xp-fill"></span></span></button><button class="primary" id="report">＋ ${t("header.report")}</button></header>
+<header><a class="brand" href="/" aria-label="${t("header.brandAria")}"><span class="brand-icon">↗</span> city<span>friction</span><sup id="brand-city">${escape(city.short)}</sup></a><nav><span class="nav-active">${t("header.navExplore")}</span><button id="about">${t("header.about")} ↗</button></nav><span id="city-slot"></span><span id="notify-slot"></span><select id="lang-select" aria-label="Language">${SUPPORTED_LANGS.map((l) => `<option value="${l.id}"${l.id === currentLang() ? " selected" : ""}>${l.label}</option>`).join("")}</select><button id="theme-toggle" class="icon-button" aria-label="Toggle dark mode">🌙</button><span id="offline-pill" class="offline-pill" hidden></span><button id="you-chip" class="you-chip" hidden aria-label="${t("header.profileAria")}"><span id="you-icon">🌱</span><span id="you-name">${t("header.newcomer")}</span><span class="xp-track"><span id="you-xp" class="xp-fill"></span></span></button><button class="primary" id="report">＋ ${t("header.report")}</button><button id="report-here" title="${t("header.reportHere")}">📍 ${t("header.reportHere")}</button></header>
 <main><section class="intro"><div><div class="eyebrow">${t("hero.eyebrow")}</div><h1>${t("hero.titleA")}<br class="mobile-break"> ${t("hero.titleB")}</h1><p>${t("hero.subtitle")}</p></div><div class="city"><span class="pulse"></span> <span id="city-name">${escape(city.name)}</span> <small id="city-kind"></small><span id="weather-pill" class="weather-pill" hidden></span><span id="nws-pill" class="nws-pill" hidden></span></div></section>
 <section class="toolbar" aria-label="${t("toolbar.filtersAria")}"><label class="search"><span>⌕</span><input id="search" placeholder="${t("toolbar.searchPlaceholder")}" aria-label="${t("toolbar.searchAria")}"></label><div id="filters" class="filters"><button class="chip active" data-category="all">${t("toolbar.all")}</button>${Object.entries(
   categories,
@@ -118,7 +119,7 @@ $("#app").innerHTML = `
   .map(([k, c]) => `<option value="${k}">${c.label}</option>`)
   .join(
     "",
-  )}</select></label><label>${t("dialogs.report.headlineLabel")}<input name="title" required minlength="3" maxlength="100" placeholder="${t("dialogs.report.headlinePh")}"></label><label>${t("dialogs.report.locationLabel")}<input name="location" required minlength="3" maxlength="100" placeholder="${t("dialogs.report.locationPh")}"></label><div class="form-row"><label>${t("dialogs.report.latLabel")}<input name="lat" type="number" step="any" min="37.70" max="37.84" required></label><label>${t("dialogs.report.lngLabel")}<input name="lng" type="number" step="any" min="-122.53" max="-122.35" required></label></div><label>${t("dialogs.report.impactLabel")}<select name="severity"><option value="1">${t("dialogs.report.impactMinor")}</option><option value="2" selected>${t("dialogs.report.impactModerate")}</option><option value="3">${t("dialogs.report.impactMajor")}</option></select></label><label>${t("dialogs.report.descriptionLabel")}<textarea name="description" maxlength="500" rows="3" placeholder="${t("dialogs.report.descriptionPh")}"></textarea></label><label>${t("photo.uploadLabel")} <span class="optional-note">(${t("dialogs.report.optional")})</span><input id="photo-file" type="file" accept="image/jpeg,image/png,image/webp"><span class="form-hint">${t("photo.uploadHint")}</span><span id="photo-preview" class="photo-preview" hidden><img alt="${t("photo.previewAlt")}"><button type="button" id="photo-remove">${t("photo.remove")}</button></span></label><div id="similar-box" class="similar-box" hidden></div><p class="form-note">${t("dialogs.report.formNote")}</p><p id="form-error" role="alert"></p><button class="primary submit" type="submit">${t("dialogs.report.submit")} ↗</button></form></dialog>
+  )}</select></label><label>${t("dialogs.report.headlineLabel")}<input name="title" required minlength="3" maxlength="100" placeholder="${t("dialogs.report.headlinePh")}"></label><label>${t("dialogs.report.locationLabel")}<input name="location" required minlength="3" maxlength="100" placeholder="${t("dialogs.report.locationPh")}"></label><div class="form-row"><label>${t("dialogs.report.latLabel")}<input name="lat" type="number" step="any" min="37.70" max="37.84" required></label><label>${t("dialogs.report.lngLabel")}<input name="lng" type="number" step="any" min="-122.53" max="-122.35" required></label></div><label>${t("dialogs.report.impactLabel")}<select name="severity"><option value="1">${t("dialogs.report.impactMinor")}</option><option value="2" selected>${t("dialogs.report.impactModerate")}</option><option value="3">${t("dialogs.report.impactMajor")}</option></select></label><label>${t("dialogs.report.descriptionLabel")}<textarea name="description" maxlength="500" rows="3" placeholder="${t("dialogs.report.descriptionPh")}"></textarea></label><label><input type="checkbox" name="stepFree"> ${t("dialogs.report.stepFree")}</label><label>${t("photo.uploadLabel")} <span class="optional-note">(${t("dialogs.report.optional")})</span><input id="photo-file" type="file" accept="image/jpeg,image/png,image/webp"><span class="form-hint">${t("photo.uploadHint")}</span><span id="photo-preview" class="photo-preview" hidden><img alt="${t("photo.previewAlt")}"><button type="button" id="photo-remove">${t("photo.remove")}</button></span></label><div id="similar-box" class="similar-box" hidden></div><p class="form-note">${t("dialogs.report.formNote")}</p><p id="form-error" role="alert"></p><button class="primary submit" type="submit">${t("dialogs.report.submit")} ↗</button></form></dialog>
 <dialog id="about-dialog"><button class="close" aria-label="${t("dialogs.about.closeAria")}">×</button><div class="eyebrow">${t("dialogs.about.eyebrow")}</div><h2>${t("dialogs.about.title")}</h2><p>${t("dialogs.about.intro")}</p><h3>${t("dialogs.about.estimatesTitle")}</h3><p>${t("dialogs.about.estimatesBody")}</p><h3>${t("dialogs.about.honestTitle")}</h3><p>${t("dialogs.about.honestBody")}</p><h3>${t("dialogs.about.shortcutsTitle")}</h3><p>${t("dialogs.about.shortcutsBody")}</p></dialog><dialog id="flag-dialog"><form id="flag-form"><div class="dialog-head"><div class="eyebrow">${t("dialogs.flag.eyebrow")}</div><button type="button" class="close" aria-label="${t("dialogs.flag.closeAria")}">×</button></div><h2>${t("dialogs.flag.title")}</h2><p>${t("dialogs.flag.intro")}</p><div class="flag-reasons"><label><input type="radio" name="reason" value="spam" required> ${t("dialogs.flag.reasonSpam")}</label><label><input type="radio" name="reason" value="inaccurate"> ${t("dialogs.flag.reasonInaccurate")}</label><label><input type="radio" name="reason" value="inappropriate"> ${t("dialogs.flag.reasonInappropriate")}</label><label><input type="radio" name="reason" value="duplicate"> ${t("dialogs.flag.reasonDuplicate")}</label></div><p id="flag-error" role="alert"></p><button class="primary submit" type="submit">${t("dialogs.flag.submit")}</button></form></dialog><dialog id="resolve-dialog"><form id="resolve-form"><div class="dialog-head"><div class="eyebrow">${t("dialogs.resolve.eyebrow")}</div><button type="button" class="close" aria-label="${t("dialogs.report.closeAria")}">×</button></div><h2>${t("dialogs.resolve.title")}</h2><p>${t("dialogs.resolve.intro")}</p><label>${t("dialogs.resolve.noteLabel")}<textarea name="note" maxlength="300" rows="3" placeholder="${t("dialogs.resolve.notePh")}"></textarea></label><p id="resolve-error" role="alert"></p><button class="primary submit" type="submit">${t("dialogs.resolve.submit")}</button></form></dialog><dialog id="alert-dialog"><form id="alert-form"><div class="dialog-head"><div class="eyebrow">${t("dialogs.alert.eyebrow")}</div><button type="button" class="close" aria-label="${t("dialogs.alert.closeAria")}">×</button></div><h2>${t("dialogs.alert.title")}</h2><p>${t("dialogs.alert.intro")}</p><label>${t("dialogs.alert.nameLabel")}<input name="label" required minlength="1" maxlength="60" placeholder="${t("dialogs.alert.namePh")}"></label><label>${t("dialogs.alert.radiusLabel")}<select name="radiusM"><option value="100">${t("dialogs.alert.r100")}</option><option value="250" selected>${t("dialogs.alert.r250")}</option><option value="500">${t("dialogs.alert.r500")}</option><option value="1000">${t("dialogs.alert.r1km")}</option><option value="2500">${t("dialogs.alert.r25km")}</option><option value="5000">${t("dialogs.alert.r5km")}</option></select></label><p id="alert-error" role="alert"></p><button class="primary submit" type="submit">${t("dialogs.alert.submit")}</button></form></dialog><dialog id="leaders-dialog"><button class="close" aria-label="${t("dialogs.leaders.closeAria")}">×</button><div class="eyebrow">${t("dialogs.leaders.eyebrow")}</div><h2>${t("dialogs.leaders.title")}</h2><div id="leaders-list"><p class="comments-empty">Loading…</p></div></dialog><dialog id="profile-dialog"><button class="close" aria-label="${t("dialogs.profile.closeAria")}">×</button><div class="eyebrow">${t("dialogs.profile.eyebrow")}</div><h2 id="profile-title">${t("dialogs.profile.title")}</h2><div id="profile-body"><p class="comments-empty">Loading…</p></div></dialog><dialog id="trends-dialog"><button class="close" aria-label="${t("dialogs.trends.closeAria")}">×</button><div class="eyebrow">${t("dialogs.trends.eyebrow")}</div><h2>${t("dialogs.trends.title")}</h2><p>${t("dialogs.trends.intro")}</p><canvas id="trends-chart" width="640" height="300" aria-label="${t("dialogs.trends.chartAria")}"></canvas><div id="trends-legend" class="trends-legend"></div><div id="trends-stats" class="trends-stats"></div></dialog><dialog id="import-dialog"><form id="import-form"><div class="dialog-head"><div class="eyebrow">${t("dialogs.import.eyebrow")}</div><button type="button" class="close" aria-label="${t("dialogs.import.closeAria")}">×</button></div><h2>${t("dialogs.import.title")}</h2><p>${t("dialogs.import.intro")}</p><label>${t("dialogs.import.fileLabel")}<input name="file" type="file" accept=".geojson,.json,application/json" required></label><p id="import-error" role="alert"></p><p id="import-status" role="status"></p><button class="primary submit" type="submit">Import reports</button></form></dialog><dialog id="moderation-dialog"><div class="dialog-head"><div class="eyebrow">${t("moderation.eyebrow")}</div><button type="button" class="close" aria-label="${t("dialogs.report.closeAria")}">×</button></div><h2>${t("moderation.title")}</h2><div id="moderation-auth"><p>${t("moderation.needToken")}</p><label>${t("moderation.tokenLabel")}<input id="moderation-token" type="password" autocomplete="off" placeholder="${t("moderation.tokenPh")}"></label><p id="moderation-error" role="alert"></p><button class="primary submit" id="moderation-unlock">${t("moderation.unlock")}</button></div><div id="moderation-list" hidden></div></dialog><dialog id="forward-dialog"><div class="dialog-head"><div class="eyebrow">${t("dialogs.forward.eyebrow")}</div><button type="button" class="close" aria-label="${t("dialogs.report.closeAria")}">×</button></div><h2>${t("dialogs.forward.title")}</h2><p>${t("dialogs.forward.intro")}</p><label>${t("dialogs.forward.summaryLabel")}<textarea id="forward-summary" rows="12" readonly></textarea></label><p id="forward-error" role="alert"></p><div class="dialog-actions"><button class="primary submit" id="forward-copy">${t("dialogs.forward.copy")}</button></div></dialog><dialog id="lightbox-dialog"><button type="button" class="close lightbox-close" aria-label="${t("dialogs.report.closeAria")}">×</button><img id="lightbox-img" alt=""></dialog><div id="toast" role="status"></div>`;
 $(".toolbar").insertAdjacentHTML(
   "beforebegin",
@@ -126,7 +127,7 @@ $(".toolbar").insertAdjacentHTML(
 );
 $(".toolbar").insertAdjacentHTML(
   "afterend",
-  `<section class="discovery-controls" aria-label="${t("controls.prefsAria")}"><div><button id="saved-toggle" class="preference" aria-pressed="false">${t("controls.saved")} <span id="saved-count">0</span></button><button id="followed-toggle" class="preference" aria-pressed="false">${t("controls.followed")} <span id="followed-count">0</span></button><button id="alerts-toggle" class="preference" aria-pressed="false">${t("controls.alertZones")}</button><button id="draw-toggle" class="preference" aria-pressed="false">${t("controls.drawZone")}</button><button id="trip-toggle" class="preference" aria-pressed="false">${t("controls.tripCheck")}</button><button id="heat-toggle" class="preference" aria-pressed="false">${t("controls.heatmap")}</button><button id="bikes-toggle" class="preference" aria-pressed="false">${t("controls.bikeDocks")}</button><button id="cases-toggle" class="preference" aria-pressed="false">${t("controls.cases311")}</button><button id="nws-toggle" class="preference" aria-pressed="false">${t("controls.weatherAlerts")}</button><button id="leaders" class="preference">${t("controls.topNeighbors")}</button><button id="moderation" class="preference">${t("controls.moderation")}</button><button id="trends" class="preference">${t("controls.trends")}</button><button id="area-toggle" class="preference" aria-pressed="false">${t("controls.thisArea")}</button><label><input id="major-only" type="checkbox"> ${t("controls.majorOnly")}</label><label><input id="hide-demo" type="checkbox"> ${t("controls.hideDemo")}</label><button id="export-csv" class="preference">${t("controls.exportCsv")}</button><button id="export-geojson" class="preference">${t("controls.exportGeojson")}</button><button id="import-geojson" class="preference">${t("controls.importGeojson")}</button><label class="opacity-label">${t("controls.layerOpacity")} <input id="layer-opacity" type="range" min="20" max="100" value="100" aria-label="Enrichment layer opacity"></label></div><label class="sort-label">${t("controls.sortBy")} <select id="sort"><option value="recent">${t("controls.sortRecent")}</option><option value="impact">${t("controls.sortImpact")}</option><option value="confirmed">${t("controls.sortConfirmed")}</option><option value="nearby">${t("controls.sortNearby")}</option></select></label><label class="sort-label">${t("controls.age")} <select id="max-age"><option value="0">${t("controls.ageAny")}</option><option value="1">${t("controls.ageHour")}</option><option value="24">${t("controls.ageDay")}</option><option value="168">${t("controls.ageWeek")}</option></select></label></section>`,
+  `<section class="discovery-controls" aria-label="${t("controls.prefsAria")}"><div><button id="saved-toggle" class="preference" aria-pressed="false">${t("controls.saved")} <span id="saved-count">0</span></button><button id="followed-toggle" class="preference" aria-pressed="false">${t("controls.followed")} <span id="followed-count">0</span></button><button id="alerts-toggle" class="preference" aria-pressed="false">${t("controls.alertZones")}</button><button id="draw-toggle" class="preference" aria-pressed="false">${t("controls.drawZone")}</button><button id="trip-toggle" class="preference" aria-pressed="false">${t("controls.tripCheck")}</button><button id="heat-toggle" class="preference" aria-pressed="false">${t("controls.heatmap")}</button><button id="bikes-toggle" class="preference" aria-pressed="false">${t("controls.bikeDocks")}</button><button id="cases-toggle" class="preference" aria-pressed="false">${t("controls.cases311")}</button><button id="nws-toggle" class="preference" aria-pressed="false">${t("controls.weatherAlerts")}</button><button id="leaders" class="preference">${t("controls.topNeighbors")}</button><button id="moderation" class="preference">${t("controls.moderation")}</button><button id="trends" class="preference">${t("controls.trends")}</button><button id="area-toggle" class="preference" aria-pressed="false">${t("controls.thisArea")}</button><label><input id="major-only" type="checkbox"> ${t("controls.majorOnly")}</label><label><input id="hide-demo" type="checkbox"> ${t("controls.hideDemo")}</label><label><input id="stepfree-only" type="checkbox"> ${t("controls.stepFreeOnly")}</label><button id="export-csv" class="preference">${t("controls.exportCsv")}</button><button id="export-geojson" class="preference">${t("controls.exportGeojson")}</button><button id="import-geojson" class="preference">${t("controls.importGeojson")}</button><label class="opacity-label">${t("controls.layerOpacity")} <input id="layer-opacity" type="range" min="20" max="100" value="100" aria-label="Enrichment layer opacity"></label></div><label class="sort-label">${t("controls.sortBy")} <select id="sort"><option value="recent">${t("controls.sortRecent")}</option><option value="impact">${t("controls.sortImpact")}</option><option value="confirmed">${t("controls.sortConfirmed")}</option><option value="nearby">${t("controls.sortNearby")}</option></select></label><label class="sort-label">${t("controls.age")} <select id="max-age"><option value="0">${t("controls.ageAny")}</option><option value="1">${t("controls.ageHour")}</option><option value="24">${t("controls.ageDay")}</option><option value="168">${t("controls.ageWeek")}</option></select></label></section>`,
 );
 $(".discovery-controls").insertAdjacentHTML(
   "afterend",
@@ -201,6 +202,11 @@ function photoFor(r) {
 // Reports the visitor already thanked, persisted locally.
 const kudoed = readIdSet(localStorage, "friction-kudoed");
 const isFresh = (r) => Date.now() - r.createdAt < 24 * 3600 * 1000;
+// Quiet for a week with no fresh confirmation: worth a one-tap nudge.
+const needsNudge = (r) =>
+  r.status === "active" &&
+  !r.expired &&
+  Date.now() - r.updatedAt > 7 * 86400000;
 // The pending compressed photo for the report form (data URL or null).
 let pendingPhoto = null;
 async function compressPhoto(file) {
@@ -238,6 +244,7 @@ function visible() {
       query,
       majorOnly,
       hideDemo,
+      stepFreeOnly,
       savedOnly,
       followedOnly,
       maxAgeHours,
@@ -275,7 +282,7 @@ function render() {
     reports.filter((r) => (!hideDemo || !r.demo) && !r.hidden),
   );
   $("#summary").innerHTML =
-    `<div><span class="summary-symbol">◉</span><strong>${stats.active}</strong><span>${t("summary.active")}</span></div><div><span class="summary-symbol red">↗</span><strong>${stats.major}</strong><span>${t("summary.major")}</span></div><div><span class="summary-symbol amber">◷</span><strong>${stats.stale}</strong><span>${t("summary.stale")}</span></div><div><span class="summary-symbol">✓</span><strong>${stats.resolved}</strong><span>${t("summary.resolved")}</span></div><small>${hideDemo ? t("summary.citywideCommunity") : t("summary.citywideDemo")}</small>`;
+    `<div><span class="summary-symbol">◉</span><strong>${stats.active}</strong><span>${t("summary.active")}</span></div><div><span class="summary-symbol red">↗</span><strong>${stats.major}</strong><span>${t("summary.major")}</span></div><div><span class="summary-symbol amber">◷</span><strong>${stats.stale}</strong><span>${t("summary.stale")}</span></div><div><span class="summary-symbol">✓</span><strong>${stats.resolved}</strong><span>${t("summary.resolved")}</span></div><div><span class="summary-symbol">✳</span><strong>${stats.clearedWeek}</strong><span>${t("summary.clearedWeek")}</span></div><small>${hideDemo ? t("summary.citywideCommunity") : t("summary.citywideDemo")}</small>`;
   $("#saved-count").textContent = reports.filter((r) => saved.has(r.id)).length;
   $("#followed-count").textContent = followed.size;
   $("#city-kind").textContent = reports.some((r) => r.demo)
@@ -304,7 +311,7 @@ function render() {
     ? rows
         .map((r) => {
           const c = categories[r.category];
-          return `<button class="report-card ${selected === r.id ? "chosen" : ""}" data-id="${r.id}"><div class="card-top"><span class="category-icon" style="--accent:${c.color}">${c.icon}</span><span class="category-label">${c.label}</span>${r.demo ? `<span class="demo">${t("card.demo")}</span>` : ""}${isFresh(r) && r.status === "active" && !r.expired ? `<span class="fresh-badge">${t("freshness.new")}</span>` : ""}${r.expired ? `<span class="expired-badge">${t("card.stale")}</span>` : ""}${unseen.has(r.id) ? `<span class="unseen-dot" title="${t("card.newUpdates")}">●</span>` : ""}<span class="age">${age(r.updatedAt)}</span>${distanceLabel(r)}</div><h3>${escape(r.title)}</h3><p class="place">${escape(r.location)}</p><div class="card-bottom"><span class="estimate">${r.status === "resolved" ? t("card.cleared") : `◷ ${escape(r.prediction.label)}`}</span><span>♧ ${t("card.confirmations", { count: r.confirmations })}</span>${r.commentCount ? `<span>💬 ${r.commentCount}</span>` : ""}${photoFor(r) ? `<span title="${t("card.photoTitle")}">📷</span>` : ""}<span class="kudos-btn" data-kudos="${r.id}" role="button" tabindex="0" aria-pressed="${kudoed.has(r.id)}" title="${t("kudos.thank")}">${kudoed.has(r.id) ? t("kudos.thanked") : t("kudos.thank")}${r.kudosCount ? ` ${r.kudosCount}` : ""}</span></div></button>`;
+          return `<button class="report-card ${selected === r.id ? "chosen" : ""}" data-id="${r.id}"><div class="card-top"><span class="category-icon" style="--accent:${c.color}">${c.icon}</span><span class="category-label">${c.label}</span>${r.demo ? `<span class="demo">${t("card.demo")}</span>` : ""}${isFresh(r) && r.status === "active" && !r.expired ? `<span class="fresh-badge">${t("freshness.new")}</span>` : ""}${r.expired ? `<span class="expired-badge">${t("card.stale")}</span>` : ""}${unseen.has(r.id) ? `<span class="unseen-dot" title="${t("card.newUpdates")}">●</span>` : ""}<span class="age">${age(r.updatedAt)}</span>${distanceLabel(r)}</div><h3>${escape(r.title)}</h3><p class="place">${escape(r.location)}</p><div class="card-bottom"><span class="estimate">${r.status === "resolved" ? t("card.cleared") : `◷ ${escape(r.prediction.label)}`}</span><span>♧ ${t("card.confirmations", { count: r.confirmations })}</span>${r.commentCount ? `<span>💬 ${r.commentCount}</span>` : ""}${photoFor(r) ? `<span title="${t("card.photoTitle")}">📷</span>` : ""}${r.stepFree ? `<span title="${t("card.stepFreeTitle")}">♿</span>` : ""}${needsNudge(r) ? `<span class="nudge-btn" data-confirm="${r.id}" role="button" tabindex="0" title="${t("card.stillThereTitle")}">${t("card.stillThere")}</span>` : ""}<span class="kudos-btn" data-kudos="${r.id}" role="button" tabindex="0" aria-pressed="${kudoed.has(r.id)}" title="${t("kudos.thank")}">${kudoed.has(r.id) ? t("kudos.thanked") : t("kudos.thank")}${r.kudosCount ? ` ${r.kudosCount}` : ""}</span></div></button>`;
         })
         .join("")
     : `<div class="empty"><span>${emptyIcon}</span><h3>${emptyTitle}</h3><p>${emptyHint}</p><button id="reset-filters">${t("empty.reset")}</button></div>`;
@@ -498,7 +505,7 @@ function renderDetail() {
         : `<div class="detail-actions"><button class="primary" data-vote="confirm">${t("detail.voteConfirm")}</button><button data-vote="clear">${t("detail.voteClear")}</button>${isAuthor ? `<button id="resolve-report">${t("detail.resolve")}</button>` : ""}</div>`
       : `<p>${t("detail.communityCleared")}</p>`;
   $("#detail").innerHTML =
-    `<button class="close" id="close-detail" aria-label="${t("detail.closeAria")}">×</button><div class="eyebrow" style="color:${c.color}">${c.label}${r.demo ? t("detail.demoSuffix") : ""}</div><h2>${escape(r.title)}</h2><p class="place">${escape(r.location)}</p>${detailPhotoHtml}<p>${escape(r.description)}</p>${r.hidden ? `<p class="hidden-notice">${t("detail.hiddenNotice")}</p>` : ""}<div class="prediction"><span>${t("detail.estimateTitle")}<strong>${r.status === "resolved" ? t("detail.cleared") : escape(r.prediction.label)}</strong></span><span class="confidence">${t("detail.confidence", { label: r.prediction.confidence })}</span></div><p class="detail-note">${t("detail.metaLine", { confirmations: r.confirmations, votes: r.clearVotes })}</p>${detailActions}<div class="timeline"><h3>${t("timeline.title")}</h3><ul>${timelineItems.join("")}</ul></div>`;
+    `<button class="close" id="close-detail" aria-label="${t("detail.closeAria")}">×</button><div class="eyebrow" style="color:${c.color}">${c.label}${r.demo ? t("detail.demoSuffix") : ""}</div><h2>${escape(r.title)}</h2><p class="place">${escape(r.location)}</p>${detailPhotoHtml}<p>${escape(r.description)}</p>${r.stepFree ? `<p class="stepfree-note" title="${t("card.stepFreeTitle")}">♿ ${t("detail.stepFree")}</p>` : ""}${r.hidden ? `<p class="hidden-notice">${t("detail.hiddenNotice")}</p>` : ""}<div class="prediction"><span>${t("detail.estimateTitle")}<strong>${r.status === "resolved" ? t("detail.cleared") : escape(r.prediction.label)}</strong></span><span class="confidence">${t("detail.confidence", { label: r.prediction.confidence })}</span></div><p class="detail-note">${t("detail.metaLine", { confirmations: r.confirmations, votes: r.clearVotes })}</p>${detailActions}<div class="timeline"><h3>${t("timeline.title")}</h3><ul>${timelineItems.join("")}</ul></div>`;
   $("#detail").insertAdjacentHTML(
     "beforeend",
     `<div class="report-tools"><button id="save-report" aria-pressed="${saved.has(r.id)}">${saved.has(r.id) ? t("detail.saveOn") : t("detail.saveOff")}</button><button id="follow-report" aria-pressed="${followed.has(r.id)}">${followed.has(r.id) ? t("detail.followOn") : t("detail.followOff")}</button><button id="kudos-report" aria-pressed="${kudoed.has(r.id)}">${kudoed.has(r.id) ? t("kudos.thanked") : t("kudos.thank")}${r.kudosCount ? ` · ${r.kudosCount}` : ""}</button><button id="flag-report">${t("detail.flag")}</button><button id="forward-report">${t("detail.forward")}</button>${canEdit ? `<button id="edit-report">${t("detail.edit")}</button>` : ""}<button id="share-report">${t("detail.share")} ↗</button></div><div id="edit-form-wrap" hidden></div><div class="impact-line">${["", t("detail.severity1"), t("detail.severity2"), t("detail.severity3")][r.severity]} ${t("detail.firstReported", { age: age(r.createdAt) })}</div><div class="comments"><h3>${t("detail.notesTitle")}</h3><div id="comment-list"><p class="comments-empty">${t("detail.notesLoading")}</p></div><form id="comment-form"><input name="note" maxlength="300" placeholder="${t("detail.notePlaceholder")}" aria-label="${t("detail.noteAria")}" autocomplete="off"><button type="submit">${t("detail.post")}</button></form><p id="comment-error" role="alert"></p></div>`,
@@ -601,6 +608,19 @@ async function toggleKudos(reportId) {
     toast(error.message);
   }
 }
+// One-tap "still there" from a report card: confirms without opening detail.
+async function quickConfirm(reportId, el) {
+  if (el.getAttribute("aria-disabled") === "true") return;
+  el.setAttribute("aria-disabled", "true");
+  try {
+    await api(`/reports/${reportId}/vote`, { action: "confirm" });
+    toast(t("toasts.voteConfirm"));
+    await refresh();
+  } catch (error) {
+    toast(error.message);
+    el.removeAttribute("aria-disabled");
+  }
+}
 $("#list").addEventListener("click", (e) => {
   if (e.target.closest("#reset-filters")) {
     resetFilters();
@@ -612,6 +632,12 @@ $("#list").addEventListener("click", (e) => {
     toggleKudos(kudosBtn.dataset.kudos);
     return;
   }
+  const confirmBtn = e.target.closest("[data-confirm]");
+  if (confirmBtn) {
+    e.stopPropagation();
+    quickConfirm(confirmBtn.dataset.confirm, confirmBtn);
+    return;
+  }
   const card = e.target.closest("[data-id]");
   if (card) select(card.dataset.id);
 });
@@ -621,6 +647,11 @@ $("#list").addEventListener("keydown", (e) => {
   if (kudosBtn) {
     e.preventDefault();
     toggleKudos(kudosBtn.dataset.kudos);
+  }
+  const confirmBtn = e.target.closest("[data-confirm]");
+  if (confirmBtn) {
+    e.preventDefault();
+    quickConfirm(confirmBtn.dataset.confirm, confirmBtn);
   }
 });
 // ---- Multi-city: switching, chrome, and the server city list ----
@@ -734,6 +765,7 @@ function resetFilters() {
   savedOnly = false;
   followedOnly = false;
   areaOnly = false;
+  stepFreeOnly = false;
   maxAgeHours = 0;
   status = "active";
   selected = null;
@@ -742,6 +774,7 @@ function resetFilters() {
   $("#search").value = "";
   $("#major-only").checked = false;
   $("#hide-demo").checked = false;
+  $("#stepfree-only").checked = false;
   $("#saved-toggle").setAttribute("aria-pressed", "false");
   $("#followed-toggle").setAttribute("aria-pressed", "false");
   $("#area-toggle").setAttribute("aria-pressed", "false");
@@ -1156,6 +1189,7 @@ function openReportPrefill(prefill) {
   form.elements.lat.value = Number(prefill.lat).toFixed(6);
   form.elements.lng.value = Number(prefill.lng).toFixed(6);
   form.elements.description.value = prefill.description || "";
+  form.elements.stepFree.checked = prefill.stepFree === true;
   $("#form-error").textContent = "";
   $("#report-dialog").showModal();
 }
@@ -1641,6 +1675,10 @@ $("#hide-demo").onchange = (e) => {
   hideDemo = e.target.checked;
   render();
 };
+$("#stepfree-only").onchange = (e) => {
+  stepFreeOnly = e.target.checked;
+  render();
+};
 $("#sort").onchange = async (e) => {
   if (e.target.value === "nearby" && !userLoc) {
     toast(t("toasts.locating"));
@@ -1837,6 +1875,7 @@ $("#detail").addEventListener("submit", async (e) => {
         category: e.target.elements.category.value,
         location: e.target.elements.location.value.trim(),
         description: e.target.elements.description.value.trim(),
+        stepFree: e.target.elements.stepFree.checked,
       };
       const result = await api(`/reports/${selected}`, patch, "PATCH");
       const i = reports.findIndex((r) => r.id === selected);
@@ -1911,6 +1950,7 @@ function openReport() {
   $("#form-error").textContent = "";
   // Fresh state for the photo attachment and duplicate preview.
   pendingPhoto = null;
+  form.elements.stepFree.checked = false;
   $("#photo-file").value = "";
   $("#photo-preview").hidden = true;
   $("#photo-preview img").removeAttribute("src");
@@ -2005,6 +2045,37 @@ $("#report-dialog").addEventListener("click", async (e) => {
   }
 });
 $("#report").onclick = openReport;
+// Quick report: prefill the form with the user's current location so
+// reporting what's right in front of them takes one tap, not map hunting.
+$("#report-here").onclick = async () => {
+  toast(t("toasts.locating"));
+  let loc;
+  try {
+    loc = userLoc || (await locateUser());
+    userLoc = loc;
+  } catch {
+    return toast(t("toasts.locationUnavailable"));
+  }
+  const [latMin, latMax] = city.bounds.lat;
+  const [lngMin, lngMax] = city.bounds.lng;
+  if (
+    loc.lat < latMin ||
+    loc.lat > latMax ||
+    loc.lng < lngMin ||
+    loc.lng > lngMax
+  ) {
+    return toast(t("toasts.outsideCity", { city: city.name }));
+  }
+  openReportPrefill({
+    lat: loc.lat,
+    lng: loc.lng,
+    location: t("dialogs.report.hereLocation", {
+      lat: loc.lat.toFixed(4),
+      lng: loc.lng.toFixed(4),
+    }),
+  });
+  map.setView([loc.lat, loc.lng], 16);
+};
 $("#report-bottom").onclick = openReport;
 map.on("click", (e) => {
   if (suppressClick) {
@@ -2034,6 +2105,7 @@ $("#report-form").onsubmit = async (e) => {
   button.disabled = true;
   const body = Object.fromEntries(new FormData(e.target));
   ["lat", "lng", "severity"].forEach((k) => (body[k] = Number(body[k])));
+  body.stepFree = body.stepFree === "on";
   body.city = city.id;
   if (pendingPhoto) body.photo = pendingPhoto;
   // Offline: queue the report locally and sync it when the connection returns.
@@ -2063,6 +2135,7 @@ $("#report-form").onsubmit = async (e) => {
     status = "active";
     majorOnly = false;
     hideDemo = false;
+    stepFreeOnly = false;
     savedOnly = false;
     $("#major-only").checked = false;
     $("#hide-demo").checked = false;
@@ -2158,7 +2231,7 @@ function toggleEditForm() {
     )
     .join(
       "",
-    )}</select></label><label>${t("dialogs.report.locationLabel")}<input name="location" required minlength="3" maxlength="100" value="${escape(r.location)}"></label><label>${t("dialogs.report.descriptionLabel")}<textarea name="description" maxlength="500" rows="3">${escape(r.description || "")}</textarea></label><p class="form-note">${t("dialogs.edit.windowNote")}</p><p id="edit-error" role="alert"></p><button class="primary submit" type="submit">${t("dialogs.edit.submit")}</button></form>`;
+    )}</select></label><label>${t("dialogs.report.locationLabel")}<input name="location" required minlength="3" maxlength="100" value="${escape(r.location)}"></label><label>${t("dialogs.report.descriptionLabel")}<textarea name="description" maxlength="500" rows="3">${escape(r.description || "")}</textarea></label><label><input type="checkbox" name="stepFree"${r.stepFree ? " checked" : ""}> ${t("dialogs.report.stepFree")}</label><p class="form-note">${t("dialogs.edit.windowNote")}</p><p id="edit-error" role="alert"></p><button class="primary submit" type="submit">${t("dialogs.edit.submit")}</button></form>`;
   wrap.hidden = false;
   wrap.querySelector("textarea, input").focus();
 }

@@ -191,6 +191,7 @@ test("summary counts active impact and stale reports separately from resolved", 
     major: 1,
     stale: 1,
     resolved: 1,
+    clearedWeek: 0,
   });
 });
 test("summary keeps expired reports out of the live counts", () => {
@@ -200,6 +201,7 @@ test("summary keeps expired reports out of the live counts", () => {
     major: 1,
     stale: 1,
     resolved: 1,
+    clearedWeek: 0,
   });
 });
 test("saved reports tolerate corrupt or unavailable storage", () => {
