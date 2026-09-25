@@ -63,6 +63,8 @@ const en = {
     newUpdates: "New updates on a report you follow",
     demo: "DEMO",
     stale: "STALE",
+    distanceM: "{n} m",
+    distanceKm: "{n} km",
   },
   map: {
     aria: "Map of San Francisco friction reports",
@@ -103,6 +105,7 @@ const en = {
     topNeighbors: "🏆 Top neighbors",
     moderation: "🛡 Moderation",
     trends: "📊 Trends",
+    thisArea: "🗺 This area",
     majorOnly: "Major impact only",
     hideDemo: "Hide demo reports",
     exportCsv: "⭳ Export CSV",
@@ -113,6 +116,12 @@ const en = {
     sortRecent: "Latest update",
     sortImpact: "Highest impact",
     sortConfirmed: "Most confirmed",
+    sortNearby: "📍 Near me",
+    age: "Updated",
+    ageAny: "Any time",
+    ageHour: "Past hour",
+    ageDay: "Past 24 hours",
+    ageWeek: "Past 7 days",
   },
   alerts: {
     panelTitle: "⚐ Your alert zones",
@@ -141,6 +150,7 @@ const en = {
     closeAria: "Close report details",
     demoSuffix: " · FICTIONAL DEMO",
     photoAlt: "Photo attached to this report",
+    photoZoom: "View photo full size",
     hiddenNotice: "⚑ Hidden after community flags. Under review.",
     estimateTitle: "Estimated time to clear",
     cleared: "Cleared",
@@ -160,6 +170,7 @@ const en = {
     followOn: "🔔 Following",
     followOff: "🔔 Follow updates",
     flag: "⚑ Flag",
+    forward: "🏛 Forward to 311",
     share: "Copy report link ↗",
     severity1: "Minor inconvenience",
     severity2: "Moderate impact",
@@ -264,6 +275,22 @@ const en = {
       reasonDuplicate: "Duplicate report",
       submit: "Flag this report",
     },
+    forward: {
+      eyebrow: "TAKE IT TO THE CITY",
+      title: "Forward to 311",
+      intro:
+        "Copy this summary and paste it into your city's 311 request form. It captures what neighbors have confirmed so far.",
+      summaryLabel: "Summary to send",
+      copy: "Copy summary",
+      lineIssue: "Issue: {title}",
+      lineCategory: "Category: {label}",
+      lineLocation: "Location: {location} ({coords})",
+      lineDescription: "Details: {description}",
+      lineCommunity:
+        "Community: {confirmations} neighbors confirm it is still there, {clearVotes} say it is cleared",
+      linePhoto: "Photo evidence attached to the original report.",
+      lineLink: "Original report: {link}",
+    },
     alert: {
       eyebrow: "NEVER MISS FRICTION AGAIN",
       closeAria: "Close alert form",
@@ -341,6 +368,11 @@ const en = {
       "Saved for this session. Browser storage is unavailable.",
     linkCopied: "Report link copied. It opens on this same server.",
     copyManually: "Copy the report link from your browser’s address bar.",
+    forwardCopied:
+      "311 summary copied. Paste it into your city’s 311 request form.",
+    locating: "Finding your location…",
+    locateFailed:
+      "Couldn’t get your location. Check your browser’s location permission.",
     unfollowed: "Unfollowed. You won't get updates on this report.",
     following:
       "Following. We'll flag new confirmations, notes, and clearance votes.",
@@ -541,6 +573,8 @@ const es = {
     newUpdates: "Novedades en un reporte que sigues",
     demo: "DEMO",
     stale: "INACTIVO",
+    distanceM: "{n} m",
+    distanceKm: "{n} km",
   },
   map: {
     aria: "Mapa de reportes de fricción de San Francisco",
@@ -582,6 +616,7 @@ const es = {
     topNeighbors: "🏆 Mejores vecinos",
     moderation: "🛡 Moderación",
     trends: "📊 Tendencias",
+    thisArea: "🗺 Esta área",
     majorOnly: "Solo impacto grave",
     hideDemo: "Ocultar reportes de demostración",
     exportCsv: "⭳ Exportar CSV",
@@ -592,6 +627,12 @@ const es = {
     sortRecent: "Última actualización",
     sortImpact: "Mayor impacto",
     sortConfirmed: "Más confirmados",
+    sortNearby: "📍 Cerca de mí",
+    age: "Actualizado",
+    ageAny: "Cualquiera",
+    ageHour: "Última hora",
+    ageDay: "Últimas 24 horas",
+    ageWeek: "Últimos 7 días",
   },
   alerts: {
     panelTitle: "⚐ Tus zonas de alerta",
@@ -620,6 +661,7 @@ const es = {
     closeAria: "Cerrar detalles del reporte",
     demoSuffix: " · DEMOSTRACIÓN FICTICIA",
     photoAlt: "Foto adjunta a este reporte",
+    photoZoom: "Ver foto en tamaño completo",
     hiddenNotice: "⚑ Oculto tras reportes de la comunidad. En revisión.",
     estimateTitle: "Tiempo estimado de resolución",
     cleared: "Resuelto",
@@ -639,6 +681,7 @@ const es = {
     followOn: "🔔 Siguiendo",
     followOff: "🔔 Seguir actualizaciones",
     flag: "⚑ Reportar",
+    forward: "🏛 Enviar al 311",
     share: "Copiar enlace del reporte ↗",
     severity1: "Molestia leve",
     severity2: "Impacto moderado",
@@ -746,6 +789,22 @@ const es = {
       reasonDuplicate: "Reporte duplicado",
       submit: "Reportar este aviso",
     },
+    forward: {
+      eyebrow: "LLÉVALO A LA CIUDAD",
+      title: "Enviar al 311",
+      intro:
+        "Copia este resumen y pégalo en el formulario 311 de tu ciudad. Incluye lo que los vecinos han confirmado hasta ahora.",
+      summaryLabel: "Resumen para enviar",
+      copy: "Copiar resumen",
+      lineIssue: "Problema: {title}",
+      lineCategory: "Categoría: {label}",
+      lineLocation: "Ubicación: {location} ({coords})",
+      lineDescription: "Detalles: {description}",
+      lineCommunity:
+        "Comunidad: {confirmations} vecinos confirman que sigue ahí, {clearVotes} dicen que se resolvió",
+      linePhoto: "Foto de evidencia adjunta al reporte original.",
+      lineLink: "Reporte original: {link}",
+    },
     alert: {
       eyebrow: "NO TE PIERDAS NINGUNA FRICCIÓN",
       closeAria: "Cerrar formulario de alerta",
@@ -825,6 +884,11 @@ const es = {
       "Guardado solo para esta sesión. El almacenamiento del navegador no está disponible.",
     linkCopied: "Enlace del reporte copiado. Se abre en este mismo servidor.",
     copyManually: "Copia el enlace del reporte desde la barra de direcciones.",
+    forwardCopied:
+      "Resumen 311 copiado. Pégalo en el formulario 311 de tu ciudad.",
+    locating: "Buscando tu ubicación…",
+    locateFailed:
+      "No pudimos obtener tu ubicación. Revisa el permiso de ubicación de tu navegador.",
     unfollowed:
       "Dejaste de seguirlo. No recibirás actualizaciones de este reporte.",
     following:

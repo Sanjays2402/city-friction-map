@@ -1,3 +1,5 @@
+import { distance } from "../server/domain.js";
+
 export function filterReports(
   reports,
   filters,
@@ -5,6 +7,9 @@ export function filterReports(
   followed = new Set(),
 ) {
   const query = filters.query.toLowerCase().trim();
+  const now = filters.now ?? Date.now();
+  const maxAgeMs = (filters.maxAgeHours || 0) * 3600000;
+  const bounds = filters.bounds;
   const rows = reports.filter(
     (r) =>
       r.status === filters.status &&
@@ -14,6 +19,12 @@ export function filterReports(
       (!filters.savedOnly || saved.has(r.id)) &&
       (!filters.followedOnly || followed.has(r.id)) &&
       (!r.hidden || filters.includeHidden) &&
+      (maxAgeMs <= 0 || now - r.updatedAt <= maxAgeMs) &&
+      (!bounds ||
+        (r.lat >= bounds.south &&
+          r.lat <= bounds.north &&
+          r.lng >= bounds.west &&
+          r.lng <= bounds.east)) &&
       `${r.title} ${r.location} ${r.description}`.toLowerCase().includes(query),
   );
   return rows.sort((a, b) => {
@@ -21,6 +32,10 @@ export function filterReports(
       return b.severity - a.severity || b.updatedAt - a.updatedAt;
     if (filters.sort === "confirmed")
       return b.confirmations - a.confirmations || b.updatedAt - a.updatedAt;
+    if (filters.sort === "nearby" && filters.userLoc) {
+      const loc = filters.userLoc;
+      return distance(loc, a) - distance(loc, b) || b.updatedAt - a.updatedAt;
+    }
     return b.updatedAt - a.updatedAt;
   });
 }

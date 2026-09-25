@@ -845,12 +845,44 @@ dialog .form-row {
   border-radius: 8px;
   overflow: hidden;
   border: 1px solid #dbe3d4;
+  padding: 0;
+  width: 100%;
+  background: none;
+  cursor: zoom-in;
+  font: inherit;
+  color: inherit;
+  text-align: left;
 }
 .report-photo img {
   display: block;
   width: 100%;
   max-height: 220px;
   object-fit: cover;
+}
+#lightbox-dialog {
+  padding: 0;
+  border: none;
+  background: transparent;
+  max-width: 94vw;
+}
+#lightbox-dialog::backdrop {
+  background: rgba(20, 26, 20, 0.88);
+}
+#lightbox-dialog img {
+  display: block;
+  max-width: 94vw;
+  max-height: 88vh;
+  border-radius: 10px;
+}
+#lightbox-dialog .lightbox-close {
+  color: #fff;
+  background: rgba(20, 26, 20, 0.6);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  line-height: 36px;
+  right: 16px;
+  top: 14px;
 }
 .optional-note {
   font-weight: 400;

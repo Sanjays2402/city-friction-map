@@ -34,6 +34,9 @@ Live layers pull in real bike-share status, 311 cases, weather, air quality, and
 | Earn XP, levels, badges, and streaks                | Take the weekly confirmation challenge                | See level icons on the leaderboard                 |
 | Export reports as GeoJSON                           | Import a GeoJSON FeatureCollection                    |                                                    |
 | Keyboard shortcuts for power users                  | Installable PWA with offline shell                    |                                                    |
+| **New in v1.8.0**                                   |                                                       |                                                    |
+| "This area" filter for the visible map              | Filter by recency (hour / day / week)                 | Forward a report to 311 with one click             |
+| Sort the list by distance ("Near me")               | Full-size photo lightbox on tap                       | Copy-ready civic summary with confirmations        |
 | **New in v1.7.0**                                   |                                                       |                                                    |
 | Resolve your report with an optional note           | Edit your report within 24 hours                      | "Gone quiet" tab for stale reports                 |
 | Moderators can also resolve reports                 | Bulk hide/restore in the moderation queue             | Confirm a quiet report to revive it                |
