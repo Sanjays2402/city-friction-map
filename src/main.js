@@ -1,6 +1,8 @@
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "./style.css";
+import "./accents.css";
+import { initPersonalization } from "./personalize.js";
 import { categories, distance } from "../server/domain.js";
 import { publicCities } from "../server/cities.js";
 import { SUPPORTED_LANGS, t, setLang, currentLang } from "./i18n.js";
@@ -144,6 +146,13 @@ const map = L.map("map", { zoomControl: false }).setView(
   city.zoom,
 );
 L.control.zoom({ position: "bottomright" }).addTo(map);
+initPersonalization({
+  map,
+  getCity: () => city.id,
+  switchCity,
+  cities,
+  spanish: currentLang() === "es",
+});
 L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
   attribution:
     '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>',
@@ -1757,6 +1766,10 @@ $("#detail").onclick = async (e) => {
     } catch {
       toast(t("toasts.storageUnavailable"));
     }
+    $("#save-report").setAttribute("aria-pressed", String(saved.has(selected)));
+    $("#save-report").textContent = saved.has(selected)
+      ? t("detail.saveOn")
+      : t("detail.saveOff");
     render();
     return;
   }

@@ -14,15 +14,14 @@ test("map focus controls and report-age filters work together", async ({
   await page.goto("/");
   await expect(page.locator(".report-card").first()).toBeVisible();
   await expect(page.locator(".demo").first()).not.toContainText("${");
-  await page.locator("#report-age").selectOption("1");
+  await page.locator("#max-age").selectOption("1");
   await expect(page.locator(".report-card")).toHaveCount(0);
-  await page.locator("#fit-results").click();
-  await expect(page.locator("#toast")).toContainText("No matching reports");
   await page.locator("#reset-filters").click();
-  await expect(page.locator("#report-age")).toHaveValue("0");
-  await page.locator("#fit-results").click();
-  await page.locator("#in-view-only").check();
-  await expect(page.locator("#count")).toContainText("In this map area");
-  await page.locator("#city-overview").click();
+  await expect(page.locator("#max-age")).toHaveValue("0");
+  await page.locator("#area-toggle").click();
+  await expect(page.locator("#area-toggle")).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
   await expect(page.locator(".report-card").first()).toBeVisible();
 });

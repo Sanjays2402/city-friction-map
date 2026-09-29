@@ -14,6 +14,8 @@ Live layers pull in real bike-share status, 311 cases, weather, air quality, and
 
 ## Features
 
+**Make it yours:** keep the original green or choose red, yellow, or blue accents in light or dark mode. Save up to ten named map views to return to favorite neighborhoods across cities. Preferences and saved places stay in your browser. Open **Make it yours** above the map.
+
 | Explore                                             | Contribute                                            | Keep track                                         |
 | --------------------------------------------------- | ----------------------------------------------------- | -------------------------------------------------- |
 | Interactive map with six categories                 | Submit a report at a chosen location                  | Save reports on your device                        |
