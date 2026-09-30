@@ -3,6 +3,8 @@ import "leaflet/dist/leaflet.css";
 import "./style.css";
 import "./accents.css";
 import "./live-context.css";
+import "./modern.css";
+import { initModernUI } from "./modern-ui.js";
 import { initPersonalization } from "./personalize.js";
 import { initLiveContext } from "./live-context.js";
 import { categories, distance } from "../server/domain.js";
@@ -160,6 +162,7 @@ const liveContext = initLiveContext({
   getCity: () => city,
   spanish: currentLang() === "es",
 });
+initModernUI({ spanish: currentLang() === "es" });
 L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
   attribution:
     '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>',

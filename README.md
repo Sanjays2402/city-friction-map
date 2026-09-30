@@ -14,6 +14,8 @@ Live layers pull in real bike-share status, 311 cases, weather, air quality, and
 
 ## Features
 
+**Modern, map-first design:** glowing primary actions, consistent outline icons, rounded report cards, segmented tabs, and grouped map tools. All four accents support light/dark mode, keyboard focus, and reduced-motion preferences.
+
 **Make it yours:** keep the original green or choose red, yellow, or blue accents in light or dark mode. Save up to ten named map views to return to favorite neighborhoods across cities. Preferences and saved places stay in your browser. Open **Make it yours** above the map.
 
 | Explore                                             | Contribute                                            | Keep track                                         |
