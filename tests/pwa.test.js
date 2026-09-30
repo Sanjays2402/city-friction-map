@@ -3,8 +3,52 @@ import assert from "node:assert/strict";
 import { readFileSync, existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
+import { runInNewContext } from "node:vm";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
+
+for (const offline of [false, true]) {
+  test(`live context service-worker requests bypass caches (offline=${offline})`, async () => {
+    const handlers = {},
+      result = { available: true };
+    let promise,
+      fetches = 0,
+      cacheReads = 0;
+    runInNewContext(readFileSync(join(root, "public/sw.js"), "utf8"), {
+      URL,
+      self: {
+        location: { origin: "https://city.example" },
+        addEventListener: (name, fn) => {
+          handlers[name] = fn;
+        },
+      },
+      fetch: async () => {
+        fetches++;
+        if (offline) throw Error("offline");
+        return result;
+      },
+      caches: {
+        match: async () => {
+          cacheReads++;
+          return { stale: true };
+        },
+      },
+    });
+    handlers.fetch({
+      request: {
+        url: "https://city.example/api/context/tides?city=sf",
+        method: "GET",
+      },
+      respondWith: (p) => {
+        promise = p;
+      },
+    });
+    if (offline) await assert.rejects(promise, /offline/);
+    else assert.equal(await promise, result);
+    assert.equal(fetches, 1);
+    assert.equal(cacheReads, 0);
+  });
+}
 
 test("web manifest is valid and installable", () => {
   const manifest = JSON.parse(

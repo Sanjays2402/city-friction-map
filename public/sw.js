@@ -1,6 +1,6 @@
 // City Friction Map service worker.
 // App shell: cache-first. API: network-first with cache fallback.
-const VERSION = "cfm-1.9.1";
+const VERSION = "cfm-1.9.2";
 const APP_SHELL = [
   "/",
   "/index.html",
@@ -41,6 +41,11 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
   if (event.request.method !== "GET" || url.origin !== self.location.origin)
     return;
+  // Never present cached live-context results as current while offline.
+  if (url.pathname.startsWith("/api/context/")) {
+    event.respondWith(fetch(event.request));
+    return;
+  }
   if (url.pathname.startsWith("/api/")) {
     // Network-first: live data wins, cached responses cover outages.
     event.respondWith(

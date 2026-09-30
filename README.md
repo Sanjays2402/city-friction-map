@@ -8,7 +8,7 @@
 
 Spot long queues, blocked sidewalks, noisy roadwork, empty bike docks, closed restrooms, and poor reception — now in **San Francisco, Seattle, and New York**. Share a heads-up, confirm what’s still there, and help the next person find a smoother day.
 
-Live layers pull in real bike-share status, 311 cases, weather, air quality, and National Weather Service alerts for the selected city, and every contribution earns XP toward levels, badges, and streaks.
+Live layers pull in real bike-share status, 311 cases, weather, air quality, and National Weather Service alerts. The **Live context** panel adds regional earthquakes, coastal tide predictions, and sunrise/sunset times for the selected city. Every contribution earns XP toward levels, badges, and streaks.
 
 ![City overview with filters, alert zones, trip check, heatmap, and interactive map](docs/screenshots/desktop.png)
 
@@ -63,6 +63,10 @@ Live enrichment layers (bike-share status, 311 cases, Open-Meteo weather and air
 
 ## Screenshots
 
+![Live context with real daylight times, NOAA tide predictions, and regional earthquakes](docs/screenshots/live-context.png)
+
+The live-context screenshot shows a point-in-time API response; values change as the providers update their data.
+
 ![City overview with filters, live data layers, gamification chip, and interactive map](docs/screenshots/desktop.png)
 
 <table>
@@ -91,6 +95,20 @@ Live enrichment layers (bike-share status, 311 cases, Open-Meteo weather and air
 </details>
 
 Screenshots show fictional San Francisco demo reports, labeled in the interface.
+
+## Free, keyless live-context APIs
+
+Open **Live context** above the map in San Francisco, Seattle, or New York. These sources require no API keys and load only when you open the panel:
+
+| Source | What you can explore |
+| --- | --- |
+| [USGS earthquake feeds](https://earthquake.usgs.gov/earthquakes/feed/v1.0/geojson.php) | M2.5+ earthquakes from the past seven days within 200 km of the city center, with optional map markers and links to the original events |
+| [NOAA CO-OPS](https://api.tidesandcurrents.noaa.gov/api/prod/) | Upcoming predicted high/low tides at San Francisco, Seattle, or The Battery; heights in meters relative to Mean Lower Low Water (MLLW) |
+| [Sunrise-Sunset.org](https://sunrise-sunset.org/api) | Today's sunrise, sunset, and end of civil twilight in the selected city's time zone |
+
+Each card links to its source and shows when it was fetched. Empty earthquake results are distinct from an unavailable feed. These are reference data, **not emergency warnings, observed water levels, flood forecasts, or guarantees of safe travel**. Public APIs may have usage limits or outages; linked providers' terms apply.
+
+The server caches earthquakes for five minutes and tide/daylight data for 30 minutes, coalesces concurrent requests, and retries failures after one minute. Refresh checks those caches; it does not bypass provider-friendly limits. Live context does not fall back to stale service-worker data when offline. Requires the Express server; static-only GitHub Pages cannot serve these proxies.
 
 ## Run locally
 

@@ -2,7 +2,9 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "./style.css";
 import "./accents.css";
+import "./live-context.css";
 import { initPersonalization } from "./personalize.js";
+import { initLiveContext } from "./live-context.js";
 import { categories, distance } from "../server/domain.js";
 import { publicCities } from "../server/cities.js";
 import { SUPPORTED_LANGS, t, setLang, currentLang } from "./i18n.js";
@@ -151,6 +153,11 @@ initPersonalization({
   getCity: () => city.id,
   switchCity,
   cities,
+  spanish: currentLang() === "es",
+});
+const liveContext = initLiveContext({
+  map,
+  getCity: () => city,
   spanish: currentLang() === "es",
 });
 L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -689,6 +696,7 @@ async function switchCity(id, opts = {}) {
   if (!next) return;
   if (next.id === city.id && !opts.keepReport) return;
   city = next;
+  liveContext.cityChanged();
   selected = null;
   lastDetailKey = null;
   $("#detail").hidden = true;
