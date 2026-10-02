@@ -1,120 +1,34 @@
 # City Friction Map
 
-**Less friction. More city.** A community map of the everyday obstacles between you and a good day.
+### Less friction. More city.
+
+A community-powered map of the small obstacles that interrupt everyday life: long queues, blocked sidewalks, noisy construction, empty bike docks, closed restrooms, and poor reception.
 
 [![Verify](https://github.com/Sanjays2402/city-friction-map/actions/workflows/ci.yml/badge.svg)](https://github.com/Sanjays2402/city-friction-map/actions/workflows/ci.yml)
 ![Node.js 22.13+](https://img.shields.io/badge/Node.js-22.13%2B-426b42)
-![SQLite](https://img.shields.io/badge/storage-SQLite-557768)
+![JavaScript](https://img.shields.io/badge/JavaScript-ES_modules-f7df1e)
+![SQLite](https://img.shields.io/badge/Storage-SQLite-557768)
 
-Spot long queues, blocked sidewalks, noisy roadwork, empty bike docks, closed restrooms, and poor reception — now in **San Francisco, Seattle, and New York**. Share a heads-up, confirm what’s still there, and help the next person find a smoother day.
+**San Francisco · Seattle · New York** · Keyless public data · Light/dark mode · Four accent colors
 
-Live layers pull in real bike-share status, 311 cases, weather, air quality, and National Weather Service alerts. The **Live context** panel adds regional earthquakes, coastal tide predictions, and sunrise/sunset times for the selected city. Every contribution earns XP toward levels, badges, and streaks.
+![Modern green dashboard with city statistics, category filters, community reports, an interactive map, and grouped map tools](docs/screenshots/desktop.png)
 
-![City overview with filters, alert zones, trip check, heatmap, and interactive map](docs/screenshots/desktop.png)
+[Quick start](#quick-start) · [Features](#what-you-can-do) · [Screenshots](#screenshots) · [Live data](#real-data-clear-boundaries) · [Engineering notes](docs/architecture.md)
 
-## Features
+## What you can do
 
-**Modern, map-first design:** glowing primary actions, consistent outline icons, rounded report cards, segmented tabs, and grouped map tools. All four accents support light/dark mode, keyboard focus, and reduced-motion preferences.
+- **Explore your neighborhood.** Search places or report text; filter by category, severity, recency, visible area, or step-free impact. Switch cities without mixing their reports.
+- **Share and verify.** Drop a pin or use “Report here,” attach a photo, leave neighbor notes, confirm an obstacle, or vote it cleared. Two clearance votes resolve a report; nearby duplicates can merge.
+- **Plan ahead.** Draw a trip and inspect reports along its corridor, view a severity heatmap, or create alert zones. Trip check matches reports to a drawn route; it is not turn-by-turn navigation.
+- **Follow what matters.** Save reports, follow updates, bookmark up to ten named map views, and explore trends. Contributions earn XP, badges, and streaks.
+- **Make it yours.** Keep the glowing green or choose red, yellow, or blue. Use dark mode, English/Spanish, keyboard shortcuts, and reduced-motion settings.
+- **Take your data with you.** Export CSV or GeoJSON, import GeoJSON reports, share report links, embed a city map, or subscribe to the RSS feed.
 
-**Make it yours:** keep the original green or choose red, yellow, or blue accents in light or dark mode. Save up to ten named map views to return to favorite neighborhoods across cities. Preferences and saved places stay in your browser. Open **Make it yours** above the map.
+Reports persist in SQLite and refresh across browsers every 15 seconds. The PWA supports an offline shell and queued reporting; live data still requires a connection.
 
-| Explore                                             | Contribute                                            | Keep track                                         |
-| --------------------------------------------------- | ----------------------------------------------------- | -------------------------------------------------- |
-| Interactive map with six categories                 | Submit a report at a chosen location                  | Save reports on your device                        |
-| Search places and report text                       | Merge nearby duplicate reports                        | Open an issue from a shareable link                |
-| Filter major obstacles or hide demo data            | Confirm an obstacle or vote it cleared                | View active, major, stale, and cleared counts      |
-| Sort by recency, impact, or confirmations           | Two clearance votes resolve an issue                  | See explainable clearance ranges                   |
-| Follow reports for update notifications             | Leave neighbor notes on any report                    | Export the filtered list as CSV                    |
-| Filter to followed reports only                     | Attach a compressed photo to a report                 | See comment and photo badges on cards              |
-| Flag misleading reports for review                  | Smarter duplicate merging by headline                 | Community flags hide misleading reports            |
-| React “helpful” on useful neighbor notes            | Reply to neighbor notes (one level)                   | Watch areas for new friction with alert zones      |
-| See the most active neighbors                       |                                                       |                                                    |
-| Check friction along a planned route                | Toggle a severity heatmap                             | See 14-day trends and averages                     |
-| Drag trip stops to fine-tune the route              | Time-filter the heatmap (24h / 7d)                    | Draw alert zones by dragging on the map            |
-| Toggle live Bay Wheels dock availability            | Toggle live SF 311 cases on the map                   | See live SF weather in the header                  |
-| Click a station to report empty docks               | Add a 311 case as a report in one click               | See live AQI next to the weather                   |
-| Filter 311 cases by top case types                  | Toggle live NWS weather alerts                        | Adjust enrichment layer opacity                    |
-| Rich marker popups with photos and notes            |                                                       |                                                    |
-| Earn XP, levels, badges, and streaks                | Take the weekly confirmation challenge                | See level icons on the leaderboard                 |
-| Export reports as GeoJSON                           | Import a GeoJSON FeatureCollection                    |                                                    |
-| Keyboard shortcuts for power users                  | Installable PWA with offline shell                    |                                                    |
-| **New in v1.9.0**                                   |                                                       |                                                    |
-| "Report here" files from your GPS location          | "Step-free issues" filter for wheelchair/stroller     | "Cleared this week" count in the overview          |
-| One-tap "Still there?" on quiet reports             | Step-free badge on cards and detail pages             | Mark step-free impact when reporting or editing    |
-| **New in v1.8.0**                                   |                                                       |                                                    |
-| "This area" filter for the visible map              | Filter by recency (hour / day / week)                 | Forward a report to 311 with one click             |
-| Sort the list by distance ("Near me")               | Full-size photo lightbox on tap                       | Copy-ready civic summary with confirmations        |
-| **New in v1.7.0**                                   |                                                       |                                                    |
-| Resolve your report with an optional note           | Edit your report within 24 hours                      | "Gone quiet" tab for stale reports                 |
-| Moderators can also resolve reports                 | Bulk hide/restore in the moderation queue             | Confirm a quiet report to revive it                |
-| Merge duplicates into a canonical report            | Resolution notes in the activity timeline             | Shared links open stale reports directly           |
-| **New in v1.6.0**                                   |                                                       |                                                    |
-| Attach compressed photo evidence to reports         | Duplicate preview before filing ("already reported?") | Thank reporters with kudos (+1 XP each)            |
-| Freshness badges on new reports                     | Report activity timelines                             | Moderation queue for flagged reports (admin token) |
-| Embeddable `/embed?city=` map for iframes           | Public RSS feed at `/api/feed.xml`                    | Print-friendly shared report pages                 |
-| **New in v1.5.0**                                   |                                                       |                                                    |
-| Switch between San Francisco, Seattle, and New York | City-scoped reports, alerts, and live data            | Notification center with unread badge              |
-| Dark mode with system preference detection          | Full Spanish translation                              | Offline report queue with automatic sync           |
-| Shareable `/r/:id` report links                     |                                                       |                                                    |
+## Quick start
 
-Reports persist in SQLite and refresh across browsers every 15 seconds. The responsive interface supports desktop and mobile.
-
-The API supports text search across titles, locations, and descriptions: `GET /api/reports?q=elevator`.
-
-Live enrichment layers (bike-share status, 311 cases, Open-Meteo weather and air quality, NWS weather alerts) come from free keyless public APIs through cached server proxies, scoped to the selected city; when an upstream is down, its toggle quietly stands down instead of showing dead data.
-
-## Screenshots
-
-![Live context with real daylight times, NOAA tide predictions, and regional earthquakes](docs/screenshots/live-context.png)
-
-The live-context screenshot shows a point-in-time API response; values change as the providers update their data.
-
-![City overview with filters, live data layers, gamification chip, and interactive map](docs/screenshots/desktop.png)
-
-<table>
-  <tr>
-    <td width="50%"><img src="docs/screenshots/layers.png" alt="Map with live bike-share dock and SF 311 case layers enabled, weather and AQI pill, weather alert pill, and layer opacity control" /></td>
-    <td width="50%"><img src="docs/screenshots/trip.png" alt="Trip check with a two-stop draggable route and friction reports matched along the corridor" /></td>
-  </tr>
-  <tr><td align="center">Live data layers: bike docks, 311 cases, weather alerts</td><td align="center">Trip check with draggable route stops</td></tr>
-  <tr>
-    <td width="50%"><img src="docs/screenshots/gamify.png" alt="City karma profile with XP level, streak, weekly challenge progress, and earned badges" /></td>
-    <td width="50%"><img src="docs/screenshots/trends.png" alt="Friction trends dialog with 14-day stacked category chart and summary stats" /></td>
-  </tr>
-  <tr><td align="center">City karma: XP, levels, badges, streaks</td><td align="center">14-day friction trends</td></tr>
-  <tr>
-    <td width="70%"><img src="docs/screenshots/report-detail.png" alt="Report details with confidence, community votes, neighbor notes, flagging, save and share controls" /></td>
-    <td width="30%"><img src="docs/screenshots/mobile.png" alt="Mobile city overview, filters, map and report list" /></td>
-  </tr>
-  <tr><td align="center">Report details & community verification</td><td align="center">Mobile exploration</td></tr>
-</table>
-
-<details>
-<summary>See the reporting flow</summary>
-
-![Report form with category, location and impact inputs](docs/screenshots/report-form.png)
-
-</details>
-
-Screenshots show fictional San Francisco demo reports, labeled in the interface.
-
-## Free, keyless live-context APIs
-
-Open **Live context** above the map in San Francisco, Seattle, or New York. These sources require no API keys and load only when you open the panel:
-
-| Source | What you can explore |
-| --- | --- |
-| [USGS earthquake feeds](https://earthquake.usgs.gov/earthquakes/feed/v1.0/geojson.php) | M2.5+ earthquakes from the past seven days within 200 km of the city center, with optional map markers and links to the original events |
-| [NOAA CO-OPS](https://api.tidesandcurrents.noaa.gov/api/prod/) | Upcoming predicted high/low tides at San Francisco, Seattle, or The Battery; heights in meters relative to Mean Lower Low Water (MLLW) |
-| [Sunrise-Sunset.org](https://sunrise-sunset.org/api) | Today's sunrise, sunset, and end of civil twilight in the selected city's time zone |
-
-Each card links to its source and shows when it was fetched. Empty earthquake results are distinct from an unavailable feed. These are reference data, **not emergency warnings, observed water levels, flood forecasts, or guarantees of safe travel**. Public APIs may have usage limits or outages; linked providers' terms apply.
-
-The server caches earthquakes for five minutes and tide/daylight data for 30 minutes, coalesces concurrent requests, and retries failures after one minute. Refresh checks those caches; it does not bypass provider-friendly limits. Live context does not fall back to stale service-worker data when offline. Requires the Express server; static-only GitHub Pages cannot serve these proxies.
-
-## Run locally
-
-Requires **Node.js 22.13+** and npm.
+Requires **Node.js 22.13 or newer** and npm. No API keys or external database setup are needed for the local demo.
 
 ```sh
 git clone https://github.com/Sanjays2402/city-friction-map.git
@@ -123,39 +37,137 @@ npm ci
 npm run dev
 ```
 
-Open [localhost:3000](http://localhost:3000). No paid API keys are required; map tiles and fonts use external services.
+Open [localhost:3000](http://localhost:3000). San Francisco starts with **fictional, labeled demo reports**; Seattle and New York start without seeded reports.
 
-For the production build:
+**A two-minute tour:** choose a category → open a report → explore **Live context** → try **Make it yours** → use **Map tools** to inspect layers or check a trip.
+
+For a production build:
 
 ```sh
 npm run build
 npm start
 ```
 
-Data is stored in `data/friction.sqlite`. Set `SEED_DEMO=false` with a fresh database to start without sample reports. The server defaults to localhost; use `HOST=0.0.0.0` for container hosting with persistent storage.
+This is a full-stack app: it needs a Node server and persistent SQLite storage. **GitHub Pages alone cannot run the API or database.** The localhost link is a local preview, not a publicly hosted demo.
 
-## Stack & architecture
+## Screenshots
 
-**JavaScript · Vite · Leaflet · Express · SQLite · Playwright · GitHub Actions**
+Fresh captures of the current interface—not design mockups. Community reports shown here are fictional demo data. Public-feed values are real point-in-time responses and may change or become unavailable.
 
-The client handles discovery and map interactions. The Express API validates updates, and SQLite transactions keep reports and votes consistent. Duplicate detection combines category, distance, and recency. Clearance ranges use transparent rules instead of an opaque prediction model.
+<details>
+<summary><strong>Dark mode · blue accent</strong></summary>
 
-Read the [engineering notes](docs/architecture.md) for algorithms, API endpoints, configuration, and design tradeoffs.
+![Blue-accent dark dashboard with city reports, map, and grouped tools](docs/screenshots/dark-mode.png)
 
-## Tests
+</details>
+
+| Live context                                                                                                                                | Personalization                                                                                                               |
+| ------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| ![Daylight times, NOAA tide predictions, and regional USGS earthquakes with source links and timestamps](docs/screenshots/live-context.png) | ![Dark personalization dialog with four accent options and a form for saving map views](docs/screenshots/personalization.png) |
+| Three public sources, city-local times, and explicit availability.                                                                          | Four accents and browser-local saved views.                                                                                   |
+
+<table>
+  <tr>
+    <td width="75%"><img src="docs/screenshots/report-detail.png" alt="Community report details over the map, including estimated clearance, verification actions, and neighbor notes" /></td>
+    <td width="25%"><img src="docs/screenshots/mobile.png" alt="Mobile map above the scrollable community report list" /></td>
+  </tr>
+  <tr><td>Report details and community verification</td><td>Mobile map and reports</td></tr>
+</table>
+
+<details>
+<summary><strong>Report an obstacle</strong></summary>
+
+![Report form with category, location, severity, and step-free impact inputs](docs/screenshots/report-form.png)
+
+</details>
+
+## Real data, clear boundaries
+
+The Express server fetches and caches public data; community reports remain separate from provider feeds. Availability varies by city:
+
+| Integration                     | San Francisco       | Seattle            | New York           |
+| ------------------------------- | ------------------- | ------------------ | ------------------ |
+| Bike-share station availability | Bay Wheels          | Not connected      | Citi Bike          |
+| Recent 311 cases                | SF 311              | Not connected      | Not connected      |
+| Weather and air quality         | Open-Meteo          | Open-Meteo         | Open-Meteo         |
+| Weather alerts                  | NWS                 | NWS                | NWS                |
+| Regional earthquakes            | USGS                | USGS               | USGS               |
+| High/low tide predictions       | NOAA: San Francisco | NOAA: Seattle      | NOAA: The Battery  |
+| Sunrise, sunset, civil twilight | Sunrise-Sunset.org  | Sunrise-Sunset.org | Sunrise-Sunset.org |
+
+**Live context** loads on demand and links to each provider. [USGS](https://earthquake.usgs.gov/earthquakes/feed/v1.0/geojson.php) events cover the past seven days, magnitude 2.5+, within 200 km of the city center. [NOAA](https://api.tidesandcurrents.noaa.gov/api/prod/) heights are astronomical predictions in meters relative to Mean Lower Low Water (MLLW), not observed water levels. [Sunrise-Sunset.org](https://sunrise-sunset.org/api) supplies daylight times for the city's local calendar date.
+
+Earthquakes are cached for five minutes, tide/daylight data for 30 minutes, and failures for one minute. Concurrent requests share in-flight work. An unavailable source is not presented as “no events,” and live context does not silently fall back to stale service-worker data. Refresh respects server cache limits.
+
+No keys are required for the connected endpoints. Public providers, map tiles, and fonts require internet access and remain subject to their own availability, usage policies, and terms.
+
+## Built to be understandable
+
+**Vanilla JavaScript · Vite · Leaflet · Express · SQLite · Playwright · GitHub Actions**
+
+The browser handles map interactions and discovery filters. Same-origin Express routes validate writes and proxy public APIs. SQLite stores reports, votes, comments, and related state.
+
+Some engineering details worth exploring:
+
+- **Geographic duplicate detection:** category, proximity, recency, and title similarity help merge repeat reports.
+- **Transactional verification:** uniqueness rules and transactions protect vote updates; tests exercise rollback behavior.
+- **Explainable clearance estimates:** category, severity, and recent confirmations determine a visible range rather than an opaque score.
+- **Resilient integrations:** bounded upstream requests, validation, caching, request coalescing, and explicit failure states.
+- **Interaction coverage:** production-browser tests cover reporting, city changes, map tools, theme persistence, keyboard focus, and responsive layouts.
+
+See [engineering notes](docs/architecture.md) for algorithms, API endpoints, and implementation tradeoffs.
+
+## Configuration
+
+| Variable      | Default                | Purpose                                                               |
+| ------------- | ---------------------- | --------------------------------------------------------------------- |
+| `PORT`        | `3000`                 | HTTP port                                                             |
+| `HOST`        | `127.0.0.1`            | Bind address; use `0.0.0.0` when required by your hosting environment |
+| `DB_PATH`     | `data/friction.sqlite` | SQLite path; use persistent storage when deploying                    |
+| `SEED_DEMO`   | Enabled                | Set to `false` with a fresh database to start without demo reports    |
+| `ADMIN_TOKEN` | Unset                  | Enables protected moderation endpoints; keep it secret                |
+
+For a clean local database on macOS/Linux:
 
 ```sh
-npm test
-npx playwright install chromium
-npm run test:e2e
+SEED_DEMO=false DB_PATH=data/clean.sqlite npm run dev
 ```
 
-The suite covers report validation, geographic matching, vote conflicts, database persistence and rollback, filtering, saved reports, shared links, resolution and editing, the stale-expiry lifecycle, bulk moderation and duplicate merging, and mobile layout. Browser tests build and exercise the production app. GitHub Actions runs verification on every push and pull request.
+This creates a separate database; it does not erase existing demo data.
 
-## Project scope
+## Development and verification
 
-This is a working portfolio MVP, currently covering San Francisco, Seattle, and New York. Demo reports are fictional; clearance estimates are heuristics, not guarantees. Saved reports are browser-local, and shared links require access to the same server. Anonymous browser IDs are not verified identities. Public deployment would still need real authentication, a suitable tile provider, and an `ADMIN_TOKEN` for the moderation endpoints.
+```sh
+npm test                         # Unit, domain, persistence, and HTTP tests
+npx playwright install chromium # One-time browser installation
+npm run test:e2e                  # Builds and tests the production app
+```
+
+GitHub Actions runs verification on pushes and pull requests. Tests cover validation, geographic matching, vote conflicts, persistence, offline behavior, public-API failure states, and desktop/mobile interactions.
+
+### Refresh the screenshots
+
+Use a separate, disposable demo instance so your own reports are untouched. In one terminal:
+
+```sh
+npm run build
+PORT=3200 DB_PATH=:memory: npm start
+```
+
+In another terminal:
+
+```sh
+node scripts/screenshots.js http://127.0.0.1:3200
+```
+
+The script captures seven PNGs in `docs/screenshots/`, uses real public feeds, and never submits reports, votes, or comments. It requires Chromium from the installation step above. Stop the demo server when finished; its in-memory data is discarded.
+
+## Scope and limitations
+
+This is a working portfolio project, not a verified civic reporting service or emergency-warning system. Demo reports are fictional, clearance estimates are heuristics, and tide/earthquake data do not establish safe travel conditions.
+
+Saved reports, followed reports, theme preferences, and named views are browser-local. Anonymous browser IDs are not verified identities. Public deployment needs an authentication/abuse-prevention review, database backups, secure moderation configuration, and a suitable map-tile provider. Offline support does not make external feeds available without a connection.
 
 ## Credits
 
-[Leaflet](https://leafletjs.com/) · [OpenStreetMap contributors](https://www.openstreetmap.org/copyright) ([tile policy](https://operations.osmfoundation.org/policies/tiles/)) · DM Sans and Manrope via Google Fonts.
+[Leaflet](https://leafletjs.com/) · [OpenStreetMap contributors](https://www.openstreetmap.org/copyright) ([tile policy](https://operations.osmfoundation.org/policies/tiles/)) · [Open-Meteo](https://open-meteo.com/) · [National Weather Service](https://www.weather.gov/documentation/services-web-api) · [USGS](https://earthquake.usgs.gov/) · [NOAA CO-OPS](https://tidesandcurrents.noaa.gov/) · [Sunrise-Sunset.org](https://sunrise-sunset.org/) · Bay Wheels/Citi Bike GBFS · [SF Open Data](https://data.sfgov.org/) · DM Sans and Manrope via Google Fonts.
