@@ -86,6 +86,17 @@ try {
   await capture(page.locator("#report-dialog"), "report-form");
   await page.locator("#report-dialog .close").click();
 
+  await page.getByLabel("Choose city").selectOption("sea");
+  await page.locator("#cases-toggle").click();
+  await expect(page.locator("#layer-filters")).toBeVisible();
+  await page.locator("#sea-events-toggle").click();
+  await expect(
+    page.locator(".leaflet-overlay-pane path[stroke='#e87943']").first(),
+  ).toHaveAttribute("stroke", "#e87943");
+  await ready(page);
+  await capture(page, "seattle", true);
+  await page.getByLabel("Choose city").selectOption("sf");
+
   await page.setViewportSize({ width: 390, height: 844 });
   await page.locator(".workspace").scrollIntoViewIfNeeded();
   await ready(page);

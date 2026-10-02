@@ -20,6 +20,7 @@ A community-powered map of the small obstacles that interrupt everyday life: lon
 - **Explore your neighborhood.** Search places or report text; filter by category, severity, recency, visible area, or step-free impact. Switch cities without mixing their reports.
 - **Share and verify.** Drop a pin or use “Report here,” attach a photo, leave neighbor notes, confirm an obstacle, or vote it cleared. Two clearance votes resolve a report; nearby duplicates can merge.
 - **Plan ahead.** Draw a trip and inspect reports along its corridor, view a severity heatmap, or create alert zones. Trip check matches reports to a drawn route; it is not turn-by-turn navigation.
+- **Explore Seattle's street-level signals.** Overlay open Find It, Fix It maintenance requests and permitted street-event segments, each linked to City of Seattle data. Permit dates are scheduled windows, not confirmed live closures.
 - **Follow what matters.** Save reports, follow updates, bookmark up to ten named map views, and explore trends. Contributions earn XP, badges, and streaks.
 - **Make it yours.** Keep the glowing green or choose red, yellow, or blue. Use dark mode, English/Spanish, keyboard shortcuts, and reduced-motion settings.
 - **Take your data with you.** Export CSV or GeoJSON, import GeoJSON reports, share report links, embed a city map, or subscribe to the RSS feed.
@@ -54,6 +55,10 @@ This is a full-stack app: it needs a Node server and persistent SQLite storage. 
 
 Fresh captures of the current interface—not design mockups. Community reports shown here are fictional demo data. Public-feed values are real point-in-time responses and may change or become unavailable.
 
+![Seattle map with open public-space maintenance requests and permitted street-event segments](docs/screenshots/seattle.png)
+
+Seattle's two city feeds appear under **Map layers** when Seattle is selected. The orange dashed segments show street permits; confirm current conditions before traveling.
+
 <details>
 <summary><strong>Dark mode · blue accent</strong></summary>
 
@@ -85,17 +90,20 @@ Fresh captures of the current interface—not design mockups. Community reports 
 
 The Express server fetches and caches public data; community reports remain separate from provider feeds. Availability varies by city:
 
-| Integration                     | San Francisco       | Seattle            | New York           |
-| ------------------------------- | ------------------- | ------------------ | ------------------ |
-| Bike-share station availability | Bay Wheels          | Not connected      | Citi Bike          |
-| Recent 311 cases                | SF 311              | Not connected      | Not connected      |
-| Weather and air quality         | Open-Meteo          | Open-Meteo         | Open-Meteo         |
-| Weather alerts                  | NWS                 | NWS                | NWS                |
-| Regional earthquakes            | USGS                | USGS               | USGS               |
-| High/low tide predictions       | NOAA: San Francisco | NOAA: Seattle      | NOAA: The Battery  |
-| Sunrise, sunset, civil twilight | Sunrise-Sunset.org  | Sunrise-Sunset.org | Sunrise-Sunset.org |
+| Integration                     | San Francisco       | Seattle                 | New York           |
+| ------------------------------- | ------------------- | ----------------------- | ------------------ |
+| Bike-share station availability | Bay Wheels          | Not connected           | Citi Bike          |
+| Open civic maintenance requests | SF 311              | Find It, Fix It         | Not connected      |
+| Permitted street events         | Not connected       | Seattle Street Closures | Not connected      |
+| Weather and air quality         | Open-Meteo          | Open-Meteo              | Open-Meteo         |
+| Weather alerts                  | NWS                 | NWS                     | NWS                |
+| Regional earthquakes            | USGS                | USGS                    | USGS               |
+| High/low tide predictions       | NOAA: San Francisco | NOAA: Seattle           | NOAA: The Battery  |
+| Sunrise, sunset, civil twilight | Sunrise-Sunset.org  | Sunrise-Sunset.org      | Sunrise-Sunset.org |
 
 **Live context** loads on demand and links to each provider. [USGS](https://earthquake.usgs.gov/earthquakes/feed/v1.0/geojson.php) events cover the past seven days, magnitude 2.5+, within 200 km of the city center. [NOAA](https://api.tidesandcurrents.noaa.gov/api/prod/) heights are astronomical predictions in meters relative to Mean Lower Low Water (MLLW), not observed water levels. [Sunrise-Sunset.org](https://sunrise-sunset.org/api) supplies daylight times for the city's local calendar date.
+
+The Seattle request layer uses the city's [Customer Service Requests dataset](https://data.seattle.gov/City-Administration/Customer-Service-Requests/5ngg-rpne), limited to open public-space maintenance categories and city bounds. The permit layer uses [Seattle Street Closures](https://data.seattle.gov/Transportation/Street-Closures/ium9-iqtc), showing mapped line segments whose permit window has not ended. These feeds are published daily; neither is a real-time passability guarantee. The app caches successful proxy responses for 60 seconds and shows feed failure separately from an empty result.
 
 Earthquakes are cached for five minutes, tide/daylight data for 30 minutes, and failures for one minute. Concurrent requests share in-flight work. An unavailable source is not presented as “no events,” and live context does not silently fall back to stale service-worker data. Refresh respects server cache limits.
 

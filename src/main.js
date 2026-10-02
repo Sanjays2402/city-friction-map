@@ -133,7 +133,7 @@ $(".toolbar").insertAdjacentHTML(
 );
 $(".toolbar").insertAdjacentHTML(
   "afterend",
-  `<section class="discovery-controls" aria-label="${t("controls.prefsAria")}"><div><button id="saved-toggle" class="preference" aria-pressed="false">${t("controls.saved")} <span id="saved-count">0</span></button><button id="followed-toggle" class="preference" aria-pressed="false">${t("controls.followed")} <span id="followed-count">0</span></button><button id="alerts-toggle" class="preference" aria-pressed="false">${t("controls.alertZones")}</button><button id="draw-toggle" class="preference" aria-pressed="false">${t("controls.drawZone")}</button><button id="trip-toggle" class="preference" aria-pressed="false">${t("controls.tripCheck")}</button><button id="heat-toggle" class="preference" aria-pressed="false">${t("controls.heatmap")}</button><button id="bikes-toggle" class="preference" aria-pressed="false">${t("controls.bikeDocks")}</button><button id="cases-toggle" class="preference" aria-pressed="false">${t("controls.cases311")}</button><button id="nws-toggle" class="preference" aria-pressed="false">${t("controls.weatherAlerts")}</button><button id="leaders" class="preference">${t("controls.topNeighbors")}</button><button id="moderation" class="preference">${t("controls.moderation")}</button><button id="trends" class="preference">${t("controls.trends")}</button><button id="area-toggle" class="preference" aria-pressed="false">${t("controls.thisArea")}</button><label><input id="major-only" type="checkbox"> ${t("controls.majorOnly")}</label><label><input id="hide-demo" type="checkbox"> ${t("controls.hideDemo")}</label><label><input id="stepfree-only" type="checkbox"> ${t("controls.stepFreeOnly")}</label><button id="export-csv" class="preference">${t("controls.exportCsv")}</button><button id="export-geojson" class="preference">${t("controls.exportGeojson")}</button><button id="import-geojson" class="preference">${t("controls.importGeojson")}</button><label class="opacity-label">${t("controls.layerOpacity")} <input id="layer-opacity" type="range" min="20" max="100" value="100" aria-label="Enrichment layer opacity"></label></div><label class="sort-label">${t("controls.sortBy")} <select id="sort"><option value="recent">${t("controls.sortRecent")}</option><option value="impact">${t("controls.sortImpact")}</option><option value="confirmed">${t("controls.sortConfirmed")}</option><option value="nearby">${t("controls.sortNearby")}</option></select></label><label class="sort-label">${t("controls.age")} <select id="max-age"><option value="0">${t("controls.ageAny")}</option><option value="1">${t("controls.ageHour")}</option><option value="24">${t("controls.ageDay")}</option><option value="168">${t("controls.ageWeek")}</option></select></label></section>`,
+  `<section class="discovery-controls" aria-label="${t("controls.prefsAria")}"><div><button id="saved-toggle" class="preference" aria-pressed="false">${t("controls.saved")} <span id="saved-count">0</span></button><button id="followed-toggle" class="preference" aria-pressed="false">${t("controls.followed")} <span id="followed-count">0</span></button><button id="alerts-toggle" class="preference" aria-pressed="false">${t("controls.alertZones")}</button><button id="draw-toggle" class="preference" aria-pressed="false">${t("controls.drawZone")}</button><button id="trip-toggle" class="preference" aria-pressed="false">${t("controls.tripCheck")}</button><button id="heat-toggle" class="preference" aria-pressed="false">${t("controls.heatmap")}</button><button id="bikes-toggle" class="preference" aria-pressed="false">${t("controls.bikeDocks")}</button><button id="cases-toggle" class="preference" aria-pressed="false">${t("controls.cases311")}</button><button id="sea-events-toggle" class="preference" aria-pressed="false" hidden>${t("controls.seattleEvents")}</button><button id="nws-toggle" class="preference" aria-pressed="false">${t("controls.weatherAlerts")}</button><button id="leaders" class="preference">${t("controls.topNeighbors")}</button><button id="moderation" class="preference">${t("controls.moderation")}</button><button id="trends" class="preference">${t("controls.trends")}</button><button id="area-toggle" class="preference" aria-pressed="false">${t("controls.thisArea")}</button><label><input id="major-only" type="checkbox"> ${t("controls.majorOnly")}</label><label><input id="hide-demo" type="checkbox"> ${t("controls.hideDemo")}</label><label><input id="stepfree-only" type="checkbox"> ${t("controls.stepFreeOnly")}</label><button id="export-csv" class="preference">${t("controls.exportCsv")}</button><button id="export-geojson" class="preference">${t("controls.exportGeojson")}</button><button id="import-geojson" class="preference">${t("controls.importGeojson")}</button><label class="opacity-label">${t("controls.layerOpacity")} <input id="layer-opacity" type="range" min="20" max="100" value="100" aria-label="Enrichment layer opacity"></label></div><label class="sort-label">${t("controls.sortBy")} <select id="sort"><option value="recent">${t("controls.sortRecent")}</option><option value="impact">${t("controls.sortImpact")}</option><option value="confirmed">${t("controls.sortConfirmed")}</option><option value="nearby">${t("controls.sortNearby")}</option></select></label><label class="sort-label">${t("controls.age")} <select id="max-age"><option value="0">${t("controls.ageAny")}</option><option value="1">${t("controls.ageHour")}</option><option value="24">${t("controls.ageDay")}</option><option value="168">${t("controls.ageWeek")}</option></select></label></section>`,
 );
 $(".discovery-controls").insertAdjacentHTML(
   "afterend",
@@ -693,6 +693,13 @@ function applyCityToChrome() {
   $("#cases-toggle").title = city.hasCases311
     ? ""
     : `311 data isn't available in ${city.name} yet.`;
+  $("#sea-events-toggle").hidden = city.id !== "sea";
+  const caseLabel = $("#cases-toggle").lastChild;
+  if (caseLabel?.nodeType === Node.TEXT_NODE)
+    caseLabel.textContent =
+      city.id === "sea"
+        ? t("controls.seattleRequests")
+        : t("controls.cases311");
 }
 async function switchCity(id, opts = {}) {
   const next = resolveCity(cities, id);
@@ -704,11 +711,17 @@ async function switchCity(id, opts = {}) {
   lastDetailKey = null;
   $("#detail").hidden = true;
   // Per-city state: drop layers, trip route, and heatmap from the old city.
-  bikesOn = casesOn = nwsOn = false;
-  for (const b of ["#bikes-toggle", "#cases-toggle", "#nws-toggle"])
+  bikesOn = casesOn = nwsOn = seaEventsOn = false;
+  for (const b of [
+    "#bikes-toggle",
+    "#cases-toggle",
+    "#sea-events-toggle",
+    "#nws-toggle",
+  ])
     $(b).setAttribute("aria-pressed", "false");
   bikeLayer.clearLayers();
   caseLayer.clearLayers();
+  seaEventLayer.clearLayers();
   nwsLayer.clearLayers();
   caseData = [];
   caseTypeFilter = null;
@@ -1071,9 +1084,11 @@ function heatPoints() {
 // showing dead UI.
 const bikeLayer = L.layerGroup().addTo(map);
 const caseLayer = L.layerGroup().addTo(map);
+const seaEventLayer = L.layerGroup().addTo(map);
 const nwsLayer = L.layerGroup().addTo(map);
 let bikesOn = false,
   casesOn = false,
+  seaEventsOn = false,
   nwsOn = false,
   caseData = [],
   caseTypeFilter = null;
@@ -1289,7 +1304,7 @@ function drawCases() {
       fillOpacity: 0.55,
     }).addTo(caseLayer);
     marker.bindPopup(
-      `<div class="layer-popup"><strong>${escape(c.type)}</strong><br>${escape(c.status)}${c.address ? `<br>${escape(c.address)}` : ""}<br><button class="mini-action" type="button">${t("popup.addCase")}</button></div>`,
+      `<div class="layer-popup"><strong>${escape(c.type)}</strong><br>${escape(c.status)}${c.address ? `<br>${escape(c.address)}` : ""}${city.id === "sea" ? `<br><small>${t("popup.seattleRequestsCadence")}</small><br><a href="https://data.seattle.gov/City-Administration/Customer-Service-Requests/5ngg-rpne" target="_blank" rel="noopener noreferrer">${t("popup.seattleEventSource")}</a>` : ""}<br><button class="mini-action" type="button">${t("popup.addCase")}</button></div>`,
     );
     marker.on("popupopen", () => {
       const btn = marker.getPopup().getElement()?.querySelector(".mini-action");
@@ -1369,24 +1384,63 @@ $("#cases-toggle").onclick = async () => {
     renderLayerFilters();
     return;
   }
+  const requestedCity = city.id;
   try {
-    const data = await api(`/enrich/cases311?city=${city.id}`);
-    if (!data.available || !casesOn) throw new Error("unavailable");
+    const data = await api(`/enrich/cases311?city=${requestedCity}`);
+    if (city.id !== requestedCity || !casesOn) return;
+    if (!data.available) throw new Error("unavailable");
     caseData = data.cases;
     caseTypeFilter = null;
     drawCases();
     renderLayerFilters();
-    toast(t("toasts.casesOn", { n: data.cases.length, city: city.short }));
+    toast(
+      t(city.id === "sea" ? "toasts.seattleRequestsOn" : "toasts.casesOn", {
+        n: data.cases.length,
+        city: city.short,
+      }),
+    );
   } catch {
+    if (city.id !== requestedCity) return;
     casesOn = false;
     $("#cases-toggle").setAttribute("aria-pressed", "false");
     toast(t("toasts.casesUnavailable"));
   }
 };
+$("#sea-events-toggle").onclick = async () => {
+  if (city.id !== "sea") return;
+  seaEventsOn = !seaEventsOn;
+  $("#sea-events-toggle").setAttribute("aria-pressed", String(seaEventsOn));
+  if (!seaEventsOn) {
+    seaEventLayer.clearLayers();
+    return;
+  }
+  try {
+    const data = await api("/enrich/seattle-events?city=sea");
+    if (city.id !== "sea" || !seaEventsOn) return;
+    if (!data.available) throw new Error("unavailable");
+    for (const event of data.events) {
+      const line = L.polyline(event.path, {
+        color: "#e87943",
+        weight: 5,
+        opacity: 0.9,
+        dashArray: "9 6",
+      }).addTo(seaEventLayer);
+      line.bindPopup(
+        `<div class="layer-popup"><strong>${escape(event.title)}</strong><br>${escape(event.street || event.type)}<br>${t("popup.seattleEventWindow", { start: escape(event.start || "?"), end: escape(event.end) })}${event.schedule ? `<br>${escape(event.schedule)}` : ""}<br><small>${t("popup.seattleEventCaution")}</small><br><a href="https://data.seattle.gov/Transportation/Street-Closures/ium9-iqtc" target="_blank" rel="noopener noreferrer">${t("popup.seattleEventSource")}</a></div>`,
+      );
+    }
+    toast(t("toasts.seattleEventsOn", { n: data.events.length }));
+  } catch {
+    if (city.id !== "sea") return;
+    seaEventsOn = false;
+    $("#sea-events-toggle").setAttribute("aria-pressed", "false");
+    toast(t("toasts.seattleEventsUnavailable"));
+  }
+};
 // One opacity slider scales every enrichment layer at once.
 $("#layer-opacity").oninput = (e) => {
   const f = Number(e.target.value) / 100;
-  for (const layer of [bikeLayer, caseLayer, nwsLayer])
+  for (const layer of [bikeLayer, caseLayer, seaEventLayer, nwsLayer])
     layer.eachLayer((m) => {
       if (m.setStyle)
         m.setStyle({ opacity: Math.min(1, f), fillOpacity: 0.65 * f });

@@ -106,6 +106,8 @@ const en = {
     heatmap: "🔥 Heatmap",
     bikeDocks: "🚲 Bike docks",
     cases311: "📋 311 cases",
+    seattleRequests: "📋 Seattle requests",
+    seattleEvents: "🚧 Street permits",
     weatherAlerts: "⚠ Weather alerts",
     topNeighbors: "🏆 Top neighbors",
     moderation: "🛡 Moderation",
@@ -206,6 +208,11 @@ const en = {
     stationEbikes: " · {n} e-bikes",
     caseSummary: "From a {city} 311 {status} case opened {date}.",
     caseDateUnknown: "an unknown date",
+    seattleEventWindow: "Permit window: {start}–{end}",
+    seattleEventCaution:
+      "Scheduled permit, not a confirmed live closure. Check current conditions before travel.",
+    seattleEventSource: "City of Seattle source ↗",
+    seattleRequestsCadence: "Open request · city feed refreshes daily",
     weatherNow: "{city} now: {temp}°C, {label}",
     weatherAqi: " · AQI {aqi} {label}",
     weatherTitle: "Live {city} weather · wind {wind} km/h",
@@ -438,6 +445,12 @@ const en = {
     casesUnavailable: "311 case data is unavailable right now.",
     casesOn:
       "{n} recent {city} 311 cases on the map — filter by type below, click one to add it as a report.",
+    seattleRequestsOn:
+      "{n} open Seattle maintenance requests on the map. City data refreshes daily.",
+    seattleEventsOn:
+      "{n} Seattle permitted street-event segments shown. Dates are permit windows, not live closure status.",
+    seattleEventsUnavailable:
+      "Seattle street permit data is unavailable right now.",
     caseAdded: "311 case added as a friction report. Thanks!",
     caseLinked: "Linked to a nearby report — your confirmation was added.",
     sharedNotFound: "This shared report could not be found on this server.",
@@ -628,6 +641,8 @@ const es = {
     heatmap: "🔥 Mapa de calor",
     bikeDocks: "🚲 Estaciones de bicis",
     cases311: "📋 Casos 311",
+    seattleRequests: "📋 Solicitudes de Seattle",
+    seattleEvents: "🚧 Permisos viales",
     weatherAlerts: "⚠ Alertas meteorológicas",
     topNeighbors: "🏆 Mejores vecinos",
     moderation: "🛡 Moderación",
@@ -729,6 +744,12 @@ const es = {
     stationEbikes: " · {n} e-bicis",
     caseSummary: "De un caso 311 de {city} {status} abierto el {date}.",
     caseDateUnknown: "una fecha desconocida",
+    seattleEventWindow: "Vigencia del permiso: {start}–{end}",
+    seattleEventCaution:
+      "Permiso programado, no cierre confirmado en vivo. Comprueba las condiciones antes de viajar.",
+    seattleEventSource: "Fuente: Ciudad de Seattle ↗",
+    seattleRequestsCadence:
+      "Solicitud abierta · la fuente municipal se actualiza a diario",
     weatherNow: "{city} ahora: {temp}°C, {label}",
     weatherAqi: " · ICA {aqi} {label}",
     weatherTitle: "Clima en vivo de {city} · viento {wind} km/h",
@@ -971,6 +992,12 @@ const es = {
     casesUnavailable: "Los datos de casos 311 no están disponibles.",
     casesOn:
       "{n} casos 311 recientes de {city} en el mapa — filtra por tipo abajo, toca uno para agregarlo como reporte.",
+    seattleRequestsOn:
+      "{n} solicitudes de mantenimiento abiertas en Seattle. Los datos municipales se actualizan diariamente.",
+    seattleEventsOn:
+      "Se muestran {n} tramos con permisos viales de Seattle. Las fechas son ventanas autorizadas, no cierres en vivo.",
+    seattleEventsUnavailable:
+      "Los datos de permisos viales de Seattle no están disponibles.",
     caseAdded: "Caso 311 agregado como reporte de fricción. ¡Gracias!",
     caseLinked: "Vinculado a un reporte cercano — se agregó tu confirmación.",
     sharedNotFound: "Este reporte compartido no se encontró en este servidor.",

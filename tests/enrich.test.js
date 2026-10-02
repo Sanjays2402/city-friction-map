@@ -144,6 +144,106 @@ test("311 proxy projects recent cases and skips records without coordinates", as
   assert.ok(!("source" in data.cases[0]), "only projected fields are returned");
 });
 
+test("Seattle requests use the open public-space feed and stay within city bounds", async (t) => {
+  const calls = [];
+  const base = await fixture(
+    t,
+    mockFetchImpl(
+      () => [
+        {
+          servicerequestnumber: "SEA-1",
+          webintakeservicerequests: "Pothole",
+          servicerequeststatusname: "Open",
+          location: "Pine St",
+          createddate: "2026-09-30T10:00:00",
+          latitude: "47.61",
+          longitude: "-122.33",
+        },
+        {
+          servicerequestnumber: "SEA-2",
+          webintakeservicerequests: "Pothole",
+          latitude: "37.77",
+          longitude: "-122.42",
+        },
+      ],
+      calls,
+    ),
+  );
+  const data = await (await fetch(base + "/cases311?city=sea")).json();
+  assert.equal(data.available, true);
+  assert.equal(data.cases.length, 1);
+  assert.equal(data.cases[0].type, "Pothole");
+  assert.equal(data.cases[0].address, "Pine St");
+  assert.equal(data.cadence, "daily");
+  const query = new URL(calls[0]);
+  assert.equal(query.host, "data.seattle.gov");
+  assert.match(
+    query.searchParams.get("$where"),
+    /servicerequeststatusname = 'Open'/,
+  );
+  assert.doesNotMatch(query.searchParams.get("$where"), /Encampment/);
+});
+
+test("Seattle street permits project only in-bounds future line segments", async (t) => {
+  const calls = [];
+  const base = await fixture(
+    t,
+    mockFetchImpl(
+      () => [
+        {
+          permit_number: "P1",
+          permit_type: "Construction",
+          project_name: "Test work",
+          street_on: "Pike St",
+          start_date: "2026-01-01",
+          end_date: "2099-12-31",
+          monday: "8 AM–5 PM",
+          line_string: {
+            coordinates: [
+              [-122.33, 47.61],
+              [-122.34, 47.62],
+            ],
+          },
+        },
+        {
+          permit_number: "P2",
+          end_date: "2020-01-01",
+          line_string: {
+            coordinates: [
+              [-122.33, 47.61],
+              [-122.34, 47.62],
+            ],
+          },
+        },
+        {
+          permit_number: "P3",
+          end_date: "2099-12-31",
+          line_string: {
+            coordinates: [
+              [-73.99, 40.7],
+              [-74, 40.71],
+            ],
+          },
+        },
+      ],
+      calls,
+    ),
+  );
+  const data = await (await fetch(base + "/seattle-events?city=sea")).json();
+  assert.equal(data.available, true);
+  assert.equal(data.events.length, 1);
+  assert.deepEqual(data.events[0].path, [
+    [47.61, -122.33],
+    [47.62, -122.34],
+  ]);
+  assert.match(data.events[0].schedule, /mon/);
+  assert.match(new URL(calls[0]).searchParams.get("$where"), /end_date >=/);
+  assert.deepEqual(
+    await (await fetch(base + "/seattle-events?city=sf")).json(),
+    { available: false },
+  );
+});
+
 test("weather proxy projects the current conditions", async (t) => {
   const base = await fixture(
     t,

@@ -32,7 +32,18 @@ export const CITIES = [
     // No verified keyless GBFS feed wired up yet; the layer degrades to
     // { available: false } instead of failing the page.
     bikeshare: null,
-    cases311: null,
+    // Find It, Fix It requests are refreshed daily; include only open,
+    // public-space maintenance categories with mapped coordinates.
+    cases311: (() => {
+      const url = new URL("https://data.seattle.gov/resource/5ngg-rpne.json");
+      url.searchParams.set("$limit", "100");
+      url.searchParams.set("$order", "createddate DESC");
+      url.searchParams.set(
+        "$where",
+        "servicerequeststatusname = 'Open' AND webintakeservicerequests in ('Pothole','Damaged Sidewalk','Streetlight Maintenance','Traffic Signal Maintenance','Street Sign Maintenance','Scooter or Bike Share Issue','Graffiti','Illegal Dumping / Needles','Public Litter and Recycling Cans','Clogged Storm Drain','ADA Request (Transportation)')",
+      );
+      return url.toString();
+    })(),
     seedDemo: false,
   },
   {

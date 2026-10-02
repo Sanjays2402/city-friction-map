@@ -1,6 +1,6 @@
 // City Friction Map service worker.
 // App shell: cache-first. API: network-first with cache fallback.
-const VERSION = "cfm-1.9.3";
+const VERSION = "cfm-1.9.4";
 const APP_SHELL = [
   "/",
   "/index.html",

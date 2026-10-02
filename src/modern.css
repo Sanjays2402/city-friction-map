@@ -429,6 +429,9 @@ aside {
   align-items: center;
   gap: 7px;
 }
+#sea-events-toggle[hidden] {
+  display: none !important;
+}
 .tool-group h3 {
   flex: 0 0 100%;
   color: var(--ui-muted);

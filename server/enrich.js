@@ -5,8 +5,8 @@ import { cityById, DEFAULT_CITY } from "./cities.js";
 // caches the upstream response for 60 seconds, aborts slow upstreams after
 // 8 seconds, and answers { available: false } instead of failing the page
 // when an upstream is unreachable. Read-only GETs: no visitor id required.
-// Pass ?city=<id> to scope weather, air quality, NWS alerts, and bikeshare
-// to a supported city; 311 cases are San Francisco only.
+// Pass ?city=<id> to scope all enrichments. Seattle's service requests and
+// street events are published by the City of Seattle and refresh daily.
 const TTL_MS = 60_000;
 const TIMEOUT_MS = 8_000;
 
@@ -51,27 +51,92 @@ function projectBikeshare(city, info, status) {
 }
 
 function project311(city, rows) {
+  if (!Array.isArray(rows)) throw new Error("bad 311 payload");
   const cases = [];
-  for (const r of Array.isArray(rows) ? rows : []) {
-    let lat = Number(r.lat);
-    let lng = Number(r.long);
-    if (!Number.isFinite(lat) && r.point?.coordinates) {
-      [lng, lat] = r.point.coordinates.map(Number);
+  for (const r of rows) {
+    const sea = city.id === "sea";
+    let lat = Number(sea ? r.latitude : r.lat);
+    let lng = Number(sea ? r.longitude : r.long);
+    const point = sea ? r.latitude_longitude : r.point;
+    if (!Number.isFinite(lat) && point?.coordinates) {
+      [lng, lat] = point.coordinates.map(Number);
     }
     if (!inBounds(city, lat, lng)) continue;
     cases.push({
-      id: r.service_request_id,
-      type: r.service_name || "311 case",
+      id: sea ? r.servicerequestnumber : r.service_request_id,
+      type: (sea ? r.webintakeservicerequests : r.service_name) || "311 case",
       subtype: r.service_subtype || "",
-      status: r.status_description || "",
-      address: r.address || "",
+      status: (sea ? r.servicerequeststatusname : r.status_description) || "",
+      address: (sea ? r.location : r.address) || "",
       lat,
       lng,
-      opened: r.requested_datetime || null,
+      opened: (sea ? r.createddate : r.requested_datetime) || null,
     });
     if (cases.length >= 100) break;
   }
-  return { available: true, updatedAt: Date.now(), cases };
+  return {
+    available: true,
+    updatedAt: Date.now(),
+    cases,
+    ...(city.id === "sea"
+      ? {
+          source:
+            "https://data.seattle.gov/City-Administration/Customer-Service-Requests/5ngg-rpne",
+          cadence: "daily",
+        }
+      : {}),
+  };
+}
+
+export function projectSeattleEvents(city, rows, today) {
+  if (!Array.isArray(rows)) throw new Error("bad Seattle street-event payload");
+  const events = [];
+  for (const r of rows) {
+    const coords = r?.line_string?.coordinates;
+    if (
+      !Array.isArray(coords) ||
+      !/^\d{4}-\d{2}-\d{2}$/.test(r?.end_date?.slice(0, 10) || "") ||
+      r.end_date.slice(0, 10) < today
+    )
+      continue;
+    const path = coords.slice(0, 150).flatMap((point) => {
+      if (!Array.isArray(point) || point.length < 2) return [];
+      const [lng, lat] = point;
+      return inBounds(city, lat, lng) ? [[lat, lng]] : [];
+    });
+    if (path.length < 2) continue;
+    const schedule = [
+      "monday",
+      "tuesday",
+      "wednesday",
+      "thursday",
+      "friday",
+      "saturday",
+      "sunday",
+    ]
+      .filter((day) => r[day])
+      .map((day) => `${day.slice(0, 3)} ${String(r[day]).slice(0, 40)}`)
+      .join(" · ");
+    events.push({
+      id: String(r.permit_number || events.length),
+      type: String(r.permit_type || "Street event").slice(0, 80),
+      title: String(
+        r.project_name || r.permit_type || "Permitted street event",
+      ).slice(0, 160),
+      street: String(r.street_on || "").slice(0, 100),
+      start: r.start_date?.slice(0, 10) || null,
+      end: r.end_date.slice(0, 10),
+      schedule,
+      path,
+    });
+    if (events.length >= 100) break;
+  }
+  return {
+    available: true,
+    updatedAt: Date.now(),
+    source: "https://data.seattle.gov/Transportation/Street-Closures/ium9-iqtc",
+    events,
+  };
 }
 
 function projectWeather(payload) {
@@ -196,6 +261,29 @@ export function createEnrichRouter(options = {}) {
     res.json(
       await cached(`cases311:${city.id}`, async (signal) =>
         project311(city, await getJson(city.cases311, signal)),
+      ),
+    );
+  });
+
+  router.get("/seattle-events", async (req, res) => {
+    const city = cityOf(req);
+    if (city.id !== "sea") return res.json({ available: false });
+    const today = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "America/Los_Angeles",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(new Date());
+    const url = new URL("https://data.seattle.gov/resource/ium9-iqtc.json");
+    url.searchParams.set("$limit", "200");
+    url.searchParams.set("$where", `end_date >= '${today}T00:00:00'`);
+    res.json(
+      await cached(`seattle-events:${today}`, async (signal) =>
+        projectSeattleEvents(
+          city,
+          await getJson(url.toString(), signal),
+          today,
+        ),
       ),
     );
   });
