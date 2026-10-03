@@ -862,52 +862,67 @@ dialog::backdrop {
 }
 @media (max-width: 700px) {
   header {
-    padding: 14px 5%;
-    gap: 8px;
+    min-height: 0;
+    padding: 10px 5%;
+    gap: 7px 8px;
   }
   header .brand {
-    font-size: 21px;
+    font-size: 20px;
+    margin-right: auto;
   }
   header .primary {
     min-height: 44px;
     padding: 11px 13px;
   }
-  header #report-here {
-    font-size: 11px;
+  header #city-slot {
+    margin-right: auto;
+  }
+  header #city-slot .city-select {
+    max-width: 150px;
+  }
+  header #notify-slot,
+  header #lang-select,
+  header #theme-toggle {
+    flex: none;
   }
   main {
-    padding: 26px 5% 0;
+    padding: 12px 5% 0;
   }
-  .intro h1 {
-    font-size: 37px;
-    letter-spacing: -1.8px;
+  .intro,
+  #summary {
+    display: none;
   }
-  .intro p {
-    font-size: 13px;
-  }
-  .summary {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .toolbar {
     gap: 8px;
+    margin-bottom: 8px;
   }
-  .summary > div {
-    min-height: 78px;
-  }
-  .summary strong {
-    font-size: 24px;
-  }
-  .summary small {
-    justify-self: start;
-    margin-left: 0;
+  .search {
+    min-height: 44px;
   }
   .filters {
-    padding-bottom: 7px;
+    gap: 6px;
+    padding-bottom: 3px;
+  }
+  .personal-bar {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    margin-bottom: 8px;
+  }
+  .personal-bar::-webkit-scrollbar {
+    display: none;
+  }
+  .personal-bar > button {
+    flex: none;
+  }
+  .layer-dock {
+    margin-bottom: 8px;
+  }
+  .layer-dock > strong {
+    padding-left: 2px;
   }
   .chip {
     flex-shrink: 0;
-  }
-  .personal-bar {
-    gap: 6px;
-    justify-content: flex-start;
   }
   #tools-jump {
     margin-right: 0;
@@ -921,10 +936,38 @@ dialog::backdrop {
     border-radius: 18px;
   }
   .map-wrap {
-    height: 390px;
+    height: clamp(300px, 47svh, 420px);
   }
   aside {
-    height: 460px;
+    height: auto;
+    min-height: 0;
+  }
+  #list {
+    flex: none;
+    overflow: visible;
+    padding: 0 10px 10px;
+  }
+  .list-header {
+    padding: 18px 16px 12px;
+  }
+  .tabs {
+    margin: 0 10px 12px;
+  }
+  .card-bottom {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+  }
+  .card-bottom .age {
+    margin-left: 0;
+  }
+  .nudge-btn,
+  .kudos-btn {
+    min-height: 32px;
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 10px;
+    white-space: nowrap;
   }
   .discovery-controls {
     padding: 16px;

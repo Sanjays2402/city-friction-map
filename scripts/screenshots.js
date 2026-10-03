@@ -103,9 +103,13 @@ try {
   await page.getByLabel("Choose city").selectOption("sf");
 
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.locator(".workspace").scrollIntoViewIfNeeded();
+  await page.evaluate(() => {
+    document.activeElement?.blur();
+    document.querySelector(".personal-bar").scrollLeft = 0;
+    window.scrollTo(0, 0);
+  });
   await ready(page);
-  await capture(page.locator(".workspace"), "mobile");
+  await capture(page, "mobile");
   if (errors.length) throw Error("Browser errors: " + errors.join("; "));
   console.log("Captured " + files.length + " screenshots: " + files.join(", "));
 } finally {

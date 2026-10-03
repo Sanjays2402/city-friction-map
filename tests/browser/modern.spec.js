@@ -41,12 +41,22 @@ test("mobile map tools stay compact until requested", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
   await expect(page.locator("#map-tools")).toBeHidden();
+  await expect(page.locator("#summary")).toBeHidden();
+  await expect(page.locator("#map-tools #report-here")).toHaveCount(1);
+  await expect(page.locator("#map-tools #you-chip")).toHaveCount(1);
+  expect((await page.locator(".map-wrap").boundingBox()).y).toBeLessThan(470);
+  expect(
+    await page
+      .locator("#list")
+      .evaluate((el) => getComputedStyle(el).overflowY),
+  ).toBe("visible");
   await expect(page.locator("#tools-jump")).toHaveAttribute(
     "aria-expanded",
     "false",
   );
   await page.locator("#tools-jump").click();
   await expect(page.locator("#map-tools")).toBeVisible();
+  await expect(page.locator("#report-here")).toBeVisible();
   await expect(page.locator("#tools-jump")).toHaveAttribute(
     "aria-expanded",
     "true",
@@ -56,6 +66,14 @@ test("mobile map tools stay compact until requested", async ({ page }) => {
   expect(
     await page.evaluate(() => document.documentElement.scrollWidth),
   ).toBeLessThanOrEqual(390);
+  await page.setViewportSize({ width: 320, height: 720 });
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth),
+  ).toBeLessThanOrEqual(320);
+  expect((await page.locator(".map-wrap").boundingBox()).y).toBeLessThan(500);
+  await page.setViewportSize({ width: 768, height: 900 });
+  await expect(page.locator("header #report-here")).toHaveCount(1);
+  await expect(page.locator("header #you-chip")).toHaveCount(1);
 });
 
 test("modern layout fits phone, tablet, and desktop in all accent themes", async ({

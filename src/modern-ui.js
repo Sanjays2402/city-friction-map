@@ -124,6 +124,23 @@ export function initModernUI({ spanish = false } = {}) {
     }
     original.append(group);
   }
+  // On phones, keep the header focused on city selection and reporting.
+  // The secondary header actions remain available in the expanded tool panel.
+  const mobileActions = ["you-chip", "report-here"].map((id) => {
+    const button = document.getElementById(id);
+    const anchor = document.createComment(`${id} desktop position`);
+    button.after(anchor);
+    return { button, anchor };
+  });
+  const mobileQuery = matchMedia("(max-width: 700px)");
+  function placeMobileActions() {
+    for (const { button, anchor } of mobileActions) {
+      if (mobileQuery.matches) original.firstElementChild.append(button);
+      else anchor.before(button);
+    }
+  }
+  mobileQuery.addEventListener("change", placeMobileActions);
+  placeMobileActions();
   controls.id = "map-tools";
   controls.tabIndex = -1;
   controls.hidden = true;

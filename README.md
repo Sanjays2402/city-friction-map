@@ -60,6 +60,8 @@ Fresh captures of the current interface—not design mockups. Community reports 
 
 Seattle's two city feeds appear in the compact **Layers** strip when Seattle is selected. Less-used preferences, trip planning, and data actions stay under **More tools**, folded by default on desktop and mobile. The compact permit row keeps the map visible; **Explore permits** opens search, daily counts, and shareable permit links. Entries without weekday details remain in **All windows** rather than being shown as active today. Orange dashed segments show permits, not confirmed closures.
 
+On phones, the map appears immediately below search and layers. The report list scrolls with the page instead of trapping gestures inside a short pane; the profile and “Report here” actions remain in **More tools**.
+
 <details>
 <summary><strong>Expanded permit explorer</strong></summary>
 
@@ -82,9 +84,9 @@ Seattle's two city feeds appear in the compact **Layers** strip when Seattle is 
 <table>
   <tr>
     <td width="75%"><img src="docs/screenshots/report-detail.png" alt="Community report details over the map, including estimated clearance, verification actions, and neighbor notes" /></td>
-    <td width="25%"><img src="docs/screenshots/mobile.png" alt="Mobile map above the scrollable community report list" /></td>
+    <td width="25%"><img src="docs/screenshots/mobile.png" alt="Phone view with compact controls and the map visible near the top" /></td>
   </tr>
-  <tr><td>Report details and community verification</td><td>Mobile map and reports</td></tr>
+  <tr><td>Report details and community verification</td><td>Map-first phone layout</td></tr>
 </table>
 
 <details>
