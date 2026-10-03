@@ -56,9 +56,17 @@ This is a full-stack app: it needs a Node server and persistent SQLite storage. 
 
 Fresh captures of the current interface—not design mockups. Community reports shown here are fictional demo data. Public-feed values are real point-in-time responses and may change or become unavailable.
 
-![Seattle map with maintenance requests, permitted street-event segments, and the permit explorer's date filters](docs/screenshots/seattle.png)
+![Seattle map with a compact permit summary above the map](docs/screenshots/seattle.png)
 
-Seattle's two city feeds appear under **Map layers** when Seattle is selected. The permit explorer searches the same records shown on the map, uses published date ranges and weekdays for its daily counts, and can open a specific permit from a shared link. Entries without weekday details remain in **All windows** rather than being shown as active today. Orange dashed segments show permits, not confirmed closures.
+Seattle's two city feeds appear under **Map layers** when Seattle is selected. The compact permit row keeps the map visible; **Explore permits** opens search, daily counts, and shareable permit links. Entries without weekday details remain in **All windows** rather than being shown as active today. Orange dashed segments show permits, not confirmed closures.
+On phones, **Map tools** stays folded until opened so the map and reports remain easy to reach.
+
+<details>
+<summary><strong>Expanded permit explorer</strong></summary>
+
+![Seattle permit search, day-by-day counts, and listed permit windows](docs/screenshots/seattle-explorer.png)
+
+</details>
 
 <details>
 <summary><strong>Dark mode · blue accent</strong></summary>

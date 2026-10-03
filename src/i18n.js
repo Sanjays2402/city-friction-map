@@ -35,6 +35,9 @@ const en = {
     clearedWeek: "Cleared this week",
     citywideDemo: "Citywide · includes demo data",
     citywideCommunity: "Citywide · community reports only",
+    emptyTitle: "No community reports in {city} yet",
+    emptyBody: "Public data layers are still available on the map.",
+    emptyAction: "Report an issue",
   },
   list: {
     title: "Around the neighborhood",
@@ -172,6 +175,8 @@ const en = {
     dayCount: "{n} permits",
     share: "Copy link",
     shareAria: "Copy link to {title}",
+    expand: "Explore permits",
+    collapse: "Hide details",
   },
   detail: {
     closeAria: "Close report details",
@@ -590,6 +595,9 @@ const es = {
     clearedWeek: "Resueltos esta semana",
     citywideDemo: "Toda la ciudad · incluye datos de demostración",
     citywideCommunity: "Toda la ciudad · solo reportes de la comunidad",
+    emptyTitle: "Aún no hay reportes de la comunidad en {city}",
+    emptyBody: "Las capas de datos públicos siguen disponibles en el mapa.",
+    emptyAction: "Reportar un problema",
   },
   list: {
     title: "Por el vecindario",
@@ -728,6 +736,8 @@ const es = {
     dayCount: "{n} permisos",
     share: "Copiar enlace",
     shareAria: "Copiar enlace de {title}",
+    expand: "Explorar permisos",
+    collapse: "Ocultar detalles",
   },
   detail: {
     closeAria: "Cerrar detalles del reporte",

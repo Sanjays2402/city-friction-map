@@ -28,6 +28,27 @@ test("grouped map tools retain controls and the jump action supports keyboard fo
   );
 });
 
+test("mobile map tools stay compact until requested", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+  await expect(page.locator("#map-tools")).toBeHidden();
+  await expect(page.locator("#tools-jump")).toHaveAttribute(
+    "aria-expanded",
+    "false",
+  );
+  await page.locator("#tools-jump").click();
+  await expect(page.locator("#map-tools")).toBeVisible();
+  await expect(page.locator("#tools-jump")).toHaveAttribute(
+    "aria-expanded",
+    "true",
+  );
+  await page.locator("#tools-jump").click();
+  await expect(page.locator("#map-tools")).toBeHidden();
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth),
+  ).toBeLessThanOrEqual(390);
+});
+
 test("modern layout fits phone, tablet, and desktop in all accent themes", async ({
   page,
 }) => {

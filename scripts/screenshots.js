@@ -94,7 +94,12 @@ try {
     page.locator(".leaflet-overlay-pane path[stroke='#e87943']").first(),
   ).toHaveAttribute("stroke", "#e87943");
   await ready(page);
+  await expect(page.locator("#toast")).not.toHaveClass(/show/, {
+    timeout: 7000,
+  });
   await capture(page, "seattle", true);
+  await page.locator(".permit-expand").click();
+  await capture(page.locator("#permit-panel"), "seattle-explorer");
   await page.getByLabel("Choose city").selectOption("sf");
 
   await page.setViewportSize({ width: 390, height: 844 });

@@ -311,8 +311,17 @@ function render() {
   const stats = summarize(
     reports.filter((r) => (!hideDemo || !r.demo) && !r.hidden),
   );
-  $("#summary").innerHTML =
-    `<div><span class="summary-symbol">◉</span><strong>${stats.active}</strong><span>${t("summary.active")}</span></div><div><span class="summary-symbol red">↗</span><strong>${stats.major}</strong><span>${t("summary.major")}</span></div><div><span class="summary-symbol amber">◷</span><strong>${stats.stale}</strong><span>${t("summary.stale")}</span></div><div><span class="summary-symbol">✓</span><strong>${stats.resolved}</strong><span>${t("summary.resolved")}</span></div><div><span class="summary-symbol">✳</span><strong>${stats.clearedWeek}</strong><span>${t("summary.clearedWeek")}</span></div><small>${hideDemo ? t("summary.citywideCommunity") : t("summary.citywideDemo")}</small>`;
+  const emptyCity =
+    city.id !== "sf" && stats.active + stats.stale + stats.resolved === 0;
+  $("#summary").classList.toggle("is-empty", emptyCity);
+  if (emptyCity) {
+    $("#summary").innerHTML =
+      `<div class="summary-empty"><span class="summary-spark" aria-hidden="true">✳</span><div class="summary-copy"><strong>${t("summary.emptyTitle", { city: escape(city.name) })}</strong><span>${t("summary.emptyBody")}</span></div><button type="button" class="preference" id="summary-report">${t("summary.emptyAction")}</button></div>`;
+    $("#summary-report").onclick = () => $("#report").click();
+  } else {
+    $("#summary").innerHTML =
+      `<div><span class="summary-symbol">◉</span><strong>${stats.active}</strong><span>${t("summary.active")}</span></div><div><span class="summary-symbol red">↗</span><strong>${stats.major}</strong><span>${t("summary.major")}</span></div><div><span class="summary-symbol amber">◷</span><strong>${stats.stale}</strong><span>${t("summary.stale")}</span></div><div><span class="summary-symbol">✓</span><strong>${stats.resolved}</strong><span>${t("summary.resolved")}</span></div><div><span class="summary-symbol">✳</span><strong>${stats.clearedWeek}</strong><span>${t("summary.clearedWeek")}</span></div><small>${hideDemo ? t("summary.citywideCommunity") : t("summary.citywideDemo")}</small>`;
+  }
   $("#saved-count").textContent = reports.filter((r) => saved.has(r.id)).length;
   $("#followed-count").textContent = followed.size;
   $("#city-kind").textContent = reports.some((r) => r.demo)
@@ -720,6 +729,7 @@ async function switchCity(id, opts = {}) {
   pendingPermitId = null;
   permitQuery = "";
   permitMode = "week";
+  permitPanelExpanded = false;
   if (!embedMode && location.pathname === "/") {
     const url = new URL(location.href);
     url.searchParams.set("city", city.id);
@@ -1123,6 +1133,7 @@ let bikesOn = false,
   seaEventsOn = false,
   seaEventData = [],
   permitMode = "week",
+  permitPanelExpanded = false,
   permitQuery = "",
   pendingPermitId = permitInUrl,
   permitLines = new Map(),
@@ -1452,6 +1463,7 @@ async function toggleSeattleEvents() {
     seaEventLayer.clearLayers();
     seaEventData = [];
     permitLines.clear();
+    permitPanelExpanded = false;
     renderPermitExplorer();
     return;
   }
@@ -1521,7 +1533,8 @@ function renderPermitExplorer(matching = [], searched = []) {
     (a.start || a.end).localeCompare(b.start || b.end),
   );
   const today = seattleToday();
-  panel.innerHTML = `<div class="permit-head"><div><h2>${t("permits.title")}</h2><p>${t("permits.subtitle")}</p></div><span class="permit-count">${t("permits.count", { shown: matching.length, total: seaEventData.length })}</span></div><label class="permit-search"><span>${t("permits.searchLabel")}</span><input type="search" value="${escape(permitQuery)}" placeholder="${t("permits.searchPlaceholder")}" aria-label="${t("permits.searchLabel")}" maxlength="100"></label><div class="permit-modes" role="group" aria-label="${t("permits.filterAria")}">${[
+  panel.classList.toggle("is-expanded", permitPanelExpanded);
+  panel.innerHTML = `<div class="permit-overview"><span class="permit-overview-icon" aria-hidden="true">◌</span><div class="permit-overview-copy"><strong>${t("permits.title")}</strong><span>${t("permits.subtitle")}</span></div><span class="permit-count">${t("permits.count", { shown: matching.length, total: seaEventData.length })}</span><button type="button" class="permit-expand" aria-expanded="${permitPanelExpanded}" aria-controls="permit-details">${t(permitPanelExpanded ? "permits.collapse" : "permits.expand")}</button></div><div id="permit-details" class="permit-details"${permitPanelExpanded ? "" : " hidden"}><label class="permit-search"><span>${t("permits.searchLabel")}</span><input type="search" value="${escape(permitQuery)}" placeholder="${t("permits.searchPlaceholder")}" aria-label="${t("permits.searchLabel")}" maxlength="100"></label><div class="permit-modes" role="group" aria-label="${t("permits.filterAria")}">${[
     ["today", t("permits.today")],
     ["week", t("permits.week")],
     ["all", t("permits.all")],
@@ -1553,7 +1566,12 @@ function renderPermitExplorer(matching = [], searched = []) {
           )
           .join("")
       : `<p class="permit-empty">${t("permits.empty")}</p>`
-  }</div><p class="permit-disclaimer">${t("permits.disclaimer")} <a href="https://data.seattle.gov/Transportation/Street-Closures/ium9-iqtc" target="_blank" rel="noopener noreferrer">${t("popup.seattleEventSource")}</a></p>`;
+  }</div><p class="permit-disclaimer">${t("permits.disclaimer")} <a href="https://data.seattle.gov/Transportation/Street-Closures/ium9-iqtc" target="_blank" rel="noopener noreferrer">${t("popup.seattleEventSource")}</a></p></div>`;
+  panel.querySelector(".permit-expand").onclick = () => {
+    permitPanelExpanded = !permitPanelExpanded;
+    renderPermitExplorer(matching, searched);
+    panel.querySelector(".permit-expand").focus();
+  };
   panel.querySelectorAll("[data-permit-mode]").forEach((button) => {
     button.onclick = () => {
       permitMode = button.dataset.permitMode;

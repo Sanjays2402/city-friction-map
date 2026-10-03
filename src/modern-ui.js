@@ -116,12 +116,29 @@ export function initModernUI({ spanish = false } = {}) {
   }
   controls.id = "map-tools";
   controls.tabIndex = -1;
+  controls.dataset.mobileCollapsed = "true";
   document.querySelector(".workspace").after(controls);
   const jump = document.createElement("button");
   jump.id = "tools-jump";
   jump.className = "preference";
-  jump.textContent = spanish ? "Herramientas del mapa ↓" : "Map tools ↓";
+  jump.setAttribute("aria-controls", "map-tools");
+  const jumpLabel = spanish ? "Herramientas del mapa" : "Map tools";
+  function syncJump() {
+    const mobile = matchMedia("(max-width: 700px)").matches;
+    const expanded = !mobile || controls.dataset.mobileCollapsed === "false";
+    jump.textContent = `${expanded && mobile ? (spanish ? "Ocultar herramientas" : "Hide map tools") : jumpLabel} ${expanded && mobile ? "↑" : "↓"}`;
+    jump.setAttribute("aria-expanded", String(expanded));
+  }
   jump.onclick = () => {
+    if (matchMedia("(max-width: 700px)").matches) {
+      controls.dataset.mobileCollapsed =
+        controls.dataset.mobileCollapsed === "true" ? "false" : "true";
+      syncJump();
+      if (controls.dataset.mobileCollapsed === "true") {
+        jump.focus();
+        return;
+      }
+    }
     controls.scrollIntoView({
       behavior: matchMedia("(prefers-reduced-motion: reduce)").matches
         ? "instant"
@@ -130,5 +147,12 @@ export function initModernUI({ spanish = false } = {}) {
     });
     controls.focus({ preventScroll: true });
   };
+  window.addEventListener("resize", syncJump);
+  syncJump();
   document.querySelector(".personal-bar").prepend(jump);
+  const bar = document.querySelector(".personal-bar");
+  bar.after(
+    document.querySelector("#layer-filters"),
+    document.querySelector("#permit-panel"),
+  );
 }

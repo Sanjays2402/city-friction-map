@@ -265,6 +265,41 @@ header .icon-button {
   border-radius: 17px;
   box-shadow: 0 2px 5px #173e2804;
 }
+.summary.is-empty {
+  display: block;
+  margin-bottom: 14px;
+}
+.summary.is-empty .summary-empty {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--ui-surface);
+}
+.summary-spark {
+  color: var(--ui-accent);
+  font-size: 22px;
+}
+.summary-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.summary.is-empty .summary-copy strong {
+  font-size: 12px;
+  font-weight: 800;
+}
+.summary.is-empty .summary-copy span {
+  color: var(--ui-muted);
+  font-size: 11px;
+}
+.summary.is-empty #summary-report {
+  margin-left: auto;
+  flex: none;
+  min-height: 34px;
+  padding: 7px 10px;
+}
 .summary strong {
   font-size: 27px;
   font-weight: 800;
@@ -433,41 +468,80 @@ aside {
   display: none !important;
 }
 .permit-panel {
-  margin: -8px 0 20px;
-  padding: 18px 20px;
+  margin: 0 0 12px;
+  padding: 10px 13px;
   border: 1px solid var(--ui-border);
-  border-radius: 18px;
+  border-radius: 14px;
   background: var(--ui-surface);
-  box-shadow: var(--ui-shadow);
+  box-shadow: 0 2px 8px #173e2810;
 }
 .permit-panel[hidden] {
   display: none !important;
 }
-.permit-head {
+.permit-overview {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 16px;
+  align-items: center;
+  gap: 11px;
 }
-.permit-head h2 {
-  margin: 0 0 4px;
+.permit-overview-icon {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  background: #e8794325;
+  color: #b65d2e;
+  font-size: 23px;
+  flex: none;
+}
+.permit-overview-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.permit-overview-copy strong {
   color: var(--ui-text);
-  font-size: 15px;
+  font-size: 12px;
 }
-.permit-head p,
+.permit-overview-copy span,
 .permit-disclaimer {
   margin: 0;
   color: var(--ui-muted);
-  font-size: 11px;
+  font-size: 10px;
 }
 .permit-count {
-  padding: 5px 10px;
+  margin-left: auto;
+  padding: 5px 9px;
   border-radius: 999px;
   background: var(--ui-soft);
   color: var(--ui-ink);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   white-space: nowrap;
+}
+.permit-expand {
+  flex: none;
+  min-height: 34px;
+  padding: 7px 10px;
+  border: 1px solid var(--ui-border);
+  border-radius: 9px;
+  background: var(--ui-panel);
+  color: var(--ui-text);
+  font-size: 11px;
+  font-weight: 700;
+}
+.permit-expand:hover {
+  border-color: var(--ui-accent);
+  background: var(--ui-soft);
+}
+.permit-details {
+  border-top: 1px solid var(--ui-border);
+  margin-top: 11px;
+  padding: 0 2px 4px;
+}
+.permit-details[hidden] {
+  display: none !important;
 }
 .permit-search {
   display: flex;
@@ -588,6 +662,28 @@ aside {
   background: var(--ui-soft);
 }
 @media (max-width: 700px) {
+  .summary.is-empty .summary-empty {
+    flex-wrap: wrap;
+  }
+  .summary.is-empty #summary-report {
+    margin-left: 42px;
+  }
+  .permit-overview {
+    flex-wrap: wrap;
+  }
+  .permit-overview-copy {
+    flex: 1;
+    min-width: 200px;
+  }
+  .permit-overview-copy span {
+    display: none;
+  }
+  .permit-count {
+    margin-left: 43px;
+  }
+  .permit-expand {
+    margin-left: auto;
+  }
   .permit-days {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
@@ -794,6 +890,9 @@ dialog::backdrop {
   }
   .discovery-controls {
     padding: 16px;
+  }
+  #map-tools[data-mobile-collapsed="true"] {
+    display: none !important;
   }
   .discovery-controls > div {
     grid-template-columns: 1fr;

@@ -67,6 +67,12 @@ test("Seattle map exposes civic requests and street permits only in Seattle", as
   await page.goto("/");
   await expect(page.locator("#sea-events-toggle")).toBeHidden();
   await page.getByLabel("Choose city").selectOption("sea");
+  await expect(page.locator("#summary.is-empty")).toContainText(
+    "No community reports in Seattle yet",
+  );
+  await page.locator("#summary-report").click();
+  await expect(page.locator("#report-dialog")).toBeVisible();
+  await page.locator("#report-dialog .close").click();
   await expect(page.locator("#sea-events-toggle")).toBeVisible();
   await expect(page.locator("#cases-toggle")).toContainText("Seattle requests");
   await page.locator("#cases-toggle").click();
@@ -80,6 +86,13 @@ test("Seattle map exposes civic requests and street permits only in Seattle", as
     page.locator(".leaflet-overlay-pane path[stroke='#e87943']"),
   ).toHaveCount(1);
   await expect(page.locator("#permit-panel")).toContainText("1 of 2 segments");
+  await expect(page.locator("#permit-details")).toBeHidden();
+  const compactHeight = await page
+    .locator("#permit-panel")
+    .evaluate((element) => element.getBoundingClientRect().height);
+  expect(compactHeight).toBeLessThan(90);
+  await page.locator(".permit-expand").click();
+  await expect(page.locator("#permit-details")).toBeVisible();
   await page.locator("#permit-panel .permit-item").first().click();
   await expect(page.locator(".leaflet-popup-content")).toContainText(
     "Pike St work",
@@ -115,6 +128,7 @@ test("Seattle map exposes civic requests and street permits only in Seattle", as
   await expect(page.locator(".leaflet-popup-content")).toContainText(
     "Future festival",
   );
+  await expect(page.locator("#permit-details")).toBeHidden();
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(page.locator("#permit-panel")).toBeVisible();
   const mobileWidth = await page.evaluate(
