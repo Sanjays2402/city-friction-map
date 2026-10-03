@@ -105,6 +105,16 @@ export function projectSeattleEvents(city, rows, today) {
       return inBounds(city, lat, lng) ? [[lat, lng]] : [];
     });
     if (path.length < 2) continue;
+    const weekdays = [
+      "sunday",
+      "monday",
+      "tuesday",
+      "wednesday",
+      "thursday",
+      "friday",
+      "saturday",
+    ];
+    const days = weekdays.flatMap((day, index) => (r[day] ? [index] : []));
     const schedule = [
       "monday",
       "tuesday",
@@ -127,6 +137,7 @@ export function projectSeattleEvents(city, rows, today) {
       start: r.start_date?.slice(0, 10) || null,
       end: r.end_date.slice(0, 10),
       schedule,
+      days,
       path,
     });
     if (events.length >= 100) break;

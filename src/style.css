@@ -2580,7 +2580,8 @@ body.embed .bottom,
 body.embed footer,
 body.embed #alerts-panel,
 body.embed #trip-panel,
-body.embed #layer-filters {
+body.embed #layer-filters,
+body.embed #permit-panel {
   display: none !important;
 }
 body.embed main {

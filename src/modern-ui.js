@@ -13,6 +13,7 @@ export function initModernUI({ spanish = false } = {}) {
     shield: '<path d="m12 3 8 3v6c0 5-8 9-8 9s-8-4-8-9V6ZM8 12l3 3 5-6"/>',
     download: '<path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5"/>',
     upload: '<path d="M12 16V4m-5 5 5-5 5 5M4 16v5h16v-5"/>',
+    link: '<path d="M10 13a5 5 0 0 0 7.1 0l2-2a5 5 0 0 0-7.1-7.1l-1.1 1.1M14 11a5 5 0 0 0-7.1 0l-2 2a5 5 0 0 0 7.1 7.1l1.1-1.1"/>',
     users:
       '<circle cx="9" cy="7" r="3"/><path d="M3 21v-3a6 6 0 0 1 12 0v3M16 4a3 3 0 0 1 0 6M18 14a5 5 0 0 1 3 4v3"/>',
     sliders:
@@ -23,6 +24,7 @@ export function initModernUI({ spanish = false } = {}) {
     "report-here": "circle",
     "saved-toggle": "bookmark",
     "followed-toggle": "bell",
+    "city-link": "link",
     "area-toggle": "map",
     "heat-toggle": "layers",
     "bikes-toggle": "circle",
@@ -65,6 +67,7 @@ export function initModernUI({ spanish = false } = {}) {
       [
         "saved-toggle",
         "followed-toggle",
+        "city-link",
         "area-toggle",
         "major-only",
         "hide-demo",

@@ -237,6 +237,7 @@ test("Seattle street permits project only in-bounds future line segments", async
     [47.62, -122.34],
   ]);
   assert.match(data.events[0].schedule, /mon/);
+  assert.deepEqual(data.events[0].days, [1]);
   assert.match(new URL(calls[0]).searchParams.get("$where"), /end_date >=/);
   assert.deepEqual(
     await (await fetch(base + "/seattle-events?city=sf")).json(),

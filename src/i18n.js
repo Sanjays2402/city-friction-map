@@ -108,6 +108,7 @@ const en = {
     cases311: "📋 311 cases",
     seattleRequests: "📋 Seattle requests",
     seattleEvents: "🚧 Street permits",
+    copyCityLink: "🔗 Copy city link",
     weatherAlerts: "⚠ Weather alerts",
     topNeighbors: "🏆 Top neighbors",
     moderation: "🛡 Moderation",
@@ -153,6 +154,18 @@ const en = {
   layers: {
     filterLabel: "311 types:",
     clearFilter: "Clear filter",
+  },
+  permits: {
+    title: "Seattle permit explorer",
+    subtitle: "Browse scheduled street-event permit windows on the map.",
+    count: "{shown} of {total} segments",
+    filterAria: "Permit window filter",
+    today: "Today",
+    week: "Next 7 days",
+    all: "All windows",
+    empty: "No permits match this window. Try another date range.",
+    disclaimer:
+      "Permit schedules can change and do not confirm a live closure.",
   },
   detail: {
     closeAria: "Close report details",
@@ -404,6 +417,7 @@ const en = {
     edited: "Report updated.",
     locationSelected:
       "Location selected. Choose “Report friction” to add a heads-up.",
+    cityLinkCopied: "Link to {city} copied. Share it with a neighbor.",
     centeredHome: "Map centered on your location.",
     locationUnavailable:
       "Location unavailable. Click the map to choose a spot.",
@@ -643,6 +657,7 @@ const es = {
     cases311: "📋 Casos 311",
     seattleRequests: "📋 Solicitudes de Seattle",
     seattleEvents: "🚧 Permisos viales",
+    copyCityLink: "🔗 Copiar enlace de ciudad",
     weatherAlerts: "⚠ Alertas meteorológicas",
     topNeighbors: "🏆 Mejores vecinos",
     moderation: "🛡 Moderación",
@@ -688,6 +703,17 @@ const es = {
   layers: {
     filterLabel: "Tipos 311:",
     clearFilter: "Quitar filtro",
+  },
+  permits: {
+    title: "Explorador de permisos de Seattle",
+    subtitle: "Explora los períodos autorizados de eventos viales en el mapa.",
+    count: "{shown} de {total} tramos",
+    filterAria: "Filtro de vigencia de permisos",
+    today: "Hoy",
+    week: "Próximos 7 días",
+    all: "Todos los períodos",
+    empty: "No hay permisos en este período. Prueba otro intervalo.",
+    disclaimer: "Los horarios pueden cambiar y no confirman un cierre en vivo.",
   },
   detail: {
     closeAria: "Cerrar detalles del reporte",
@@ -948,6 +974,7 @@ const es = {
     edited: "Reporte actualizado.",
     locationSelected:
       "Ubicación seleccionada. Elige “Reportar un obstáculo” para agregar un aviso.",
+    cityLinkCopied: "Enlace de {city} copiado. Compártelo con un vecino.",
     centeredHome: "Mapa centrado en tu ubicación.",
     locationUnavailable:
       "Ubicación no disponible. Toca el mapa para elegir un punto.",
