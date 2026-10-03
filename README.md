@@ -11,7 +11,7 @@ A community-powered map of the small obstacles that interrupt everyday life: lon
 
 **San Francisco · Seattle · New York** · Keyless public data · Light/dark mode · Four accent colors
 
-![Modern green dashboard with city statistics, category filters, community reports, an interactive map, and grouped map tools](docs/screenshots/desktop.png)
+![Clean green dashboard with city statistics, a compact layer strip, community reports, and an interactive map](docs/screenshots/desktop.png)
 
 [Quick start](#quick-start) · [Features](#what-you-can-do) · [Screenshots](#screenshots) · [Live data](#real-data-clear-boundaries) · [Engineering notes](docs/architecture.md)
 
@@ -39,9 +39,9 @@ npm run dev
 ```
 
 Open [localhost:3000](http://localhost:3000). San Francisco starts with **fictional, labeled demo reports**; Seattle and New York start without seeded reports.
-Open [the Seattle view](http://localhost:3000/?city=sea) directly, or use **Copy city link** under Map tools to share a city-specific URL from any view.
+Open [the Seattle view](http://localhost:3000/?city=sea) directly, or use **Copy city link** under **More tools** to share a city-specific URL from any view.
 
-**A two-minute tour:** choose a category → open a report → explore **Live context** → try **Make it yours** → use **Map tools** to inspect layers or check a trip.
+**A two-minute tour:** choose a category → open a report → try the compact **Layers** strip → explore **Live context** → open **More tools** to check a trip.
 
 For a production build:
 
@@ -58,8 +58,7 @@ Fresh captures of the current interface—not design mockups. Community reports 
 
 ![Seattle map with a compact permit summary above the map](docs/screenshots/seattle.png)
 
-Seattle's two city feeds appear under **Map layers** when Seattle is selected. The compact permit row keeps the map visible; **Explore permits** opens search, daily counts, and shareable permit links. Entries without weekday details remain in **All windows** rather than being shown as active today. Orange dashed segments show permits, not confirmed closures.
-On phones, **Map tools** stays folded until opened so the map and reports remain easy to reach.
+Seattle's two city feeds appear in the compact **Layers** strip when Seattle is selected. Less-used preferences, trip planning, and data actions stay under **More tools**, folded by default on desktop and mobile. The compact permit row keeps the map visible; **Explore permits** opens search, daily counts, and shareable permit links. Entries without weekday details remain in **All windows** rather than being shown as active today. Orange dashed segments show permits, not confirmed closures.
 
 <details>
 <summary><strong>Expanded permit explorer</strong></summary>
@@ -71,7 +70,7 @@ On phones, **Map tools** stays folded until opened so the map and reports remain
 <details>
 <summary><strong>Dark mode · blue accent</strong></summary>
 
-![Blue-accent dark dashboard with city reports, map, and grouped tools](docs/screenshots/dark-mode.png)
+![Blue-accent dark dashboard with city reports, map, and compact layers](docs/screenshots/dark-mode.png)
 
 </details>
 
@@ -177,7 +176,7 @@ In another terminal:
 node scripts/screenshots.js http://127.0.0.1:3200
 ```
 
-The script captures seven PNGs in `docs/screenshots/`, uses real public feeds, and never submits reports, votes, or comments. It requires Chromium from the installation step above. Stop the demo server when finished; its in-memory data is discarded.
+The script captures nine PNGs in `docs/screenshots/`, uses real public feeds, and never submits reports, votes, or comments. It requires Chromium from the installation step above. Stop the demo server when finished; its in-memory data is discarded.
 
 ## Scope and limitations
 

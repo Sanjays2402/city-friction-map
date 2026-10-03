@@ -61,9 +61,11 @@ test("comment on a report, follow it, and filter to followed reports", async ({
     "aria-pressed",
     "true",
   );
+  await page.locator("#tools-jump").click();
   await page.locator("#followed-toggle").click();
   await expect(page.locator(".report-card")).toHaveCount(1);
   await page.reload();
+  await page.locator("#tools-jump").click();
   await page.locator("#followed-toggle").click();
   await expect(page.locator(".report-card")).toHaveCount(1);
 });
@@ -81,6 +83,7 @@ test("mobile layout fits the viewport", async ({ page }) => {
 
 test("save, reload, share, filter and sort reports", async ({ page }) => {
   await page.goto("/");
+  await page.locator("#tools-jump").click();
   await page.locator("#major-only").check();
   await expect(page.locator(".report-card")).toHaveCount(2);
   await page.locator("#sort").selectOption("confirmed");
@@ -96,6 +99,7 @@ test("save, reload, share, filter and sort reports", async ({ page }) => {
     "true",
   );
   await page.reload();
+  await page.locator("#tools-jump").click();
   await expect(page.locator("#detail")).toContainText(
     "Elevator out of service",
   );
@@ -105,6 +109,7 @@ test("save, reload, share, filter and sort reports", async ({ page }) => {
   await expect(page.locator(".report-card")).toHaveCount(0);
   await page.locator("#reset-filters").click();
   await page.goto(shared);
+  await page.locator("#tools-jump").click();
   await expect(page.locator("#detail")).toContainText(
     "Elevator out of service",
   );

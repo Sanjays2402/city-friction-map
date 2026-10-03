@@ -4,22 +4,31 @@ test.beforeEach(async ({ context }) => {
   await context.route("https://tile.openstreetmap.org/**", (r) => r.abort());
 });
 
-test("grouped map tools retain controls and the jump action supports keyboard focus", async ({
+test("map layers stay visible while extra tools open on demand", async ({
   page,
 }) => {
   await page.goto("/");
-  await expect(page.locator("#map-tools .tool-group")).toHaveCount(4);
+  await expect(page.locator("#map-tools")).toBeHidden();
+  await expect(page.locator("#layer-dock")).toBeVisible();
+  await expect(page.locator("#map-tools .tool-group")).toHaveCount(3);
   for (const id of [
     "saved-toggle",
     "trip-toggle",
-    "bikes-toggle",
     "export-csv",
     "major-only",
-    "layer-opacity",
   ]) {
     await expect(page.locator(`#map-tools #${id}`)).toHaveCount(1);
   }
+  for (const id of [
+    "heat-toggle",
+    "bikes-toggle",
+    "cases-toggle",
+    "layer-opacity",
+  ]) {
+    await expect(page.locator(`#layer-dock #${id}`)).toHaveCount(1);
+  }
   await page.locator("#tools-jump").click();
+  await expect(page.locator("#map-tools")).toBeVisible();
   await expect(page.locator("#map-tools")).toBeFocused();
   await expect(page.locator("#report")).toHaveAccessibleName("Report friction");
   await expect(page.locator("#report svg")).toHaveAttribute(

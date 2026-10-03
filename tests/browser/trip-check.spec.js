@@ -12,6 +12,7 @@ test("trip check draws a route and reports corridor friction", async ({
   await page.goto("/");
   await expect(page.locator(".report-card")).toHaveCount(9);
 
+  await page.locator("#tools-jump").click();
   await page.locator("#trip-toggle").click();
   await expect(page.locator("#trip-panel")).toBeVisible();
   await expect(page.locator("#trip-panel")).toContainText("drop route stops");

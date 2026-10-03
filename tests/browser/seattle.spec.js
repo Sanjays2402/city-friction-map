@@ -150,6 +150,7 @@ test("city-specific links open the intended city and can be copied", async ({
   await page.addInitScript(() => localStorage.setItem("friction-city", "sf"));
   await page.goto("/?city=sea");
   await expect(page.getByLabel("Choose city")).toHaveValue("sea");
+  await page.locator("#tools-jump").click();
   await page.locator("#city-link").click();
   const copied = await page.evaluate(() => navigator.clipboard.readText());
   assertCityUrl(copied, "sea");

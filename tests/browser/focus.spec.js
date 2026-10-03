@@ -12,6 +12,7 @@ test("map focus controls and report-age filters work together", async ({
     });
   });
   await page.goto("/");
+  await page.locator("#tools-jump").click();
   await expect(page.locator(".report-card").first()).toBeVisible();
   await expect(page.locator(".demo").first()).not.toContainText("${");
   await page.locator("#max-age").selectOption("1");

@@ -1,4 +1,4 @@
-// Keep the existing controls and event targets; group them without hiding tools.
+// Keep existing event targets while giving the map a small, predictable control surface.
 export function initModernUI({ spanish = false } = {}) {
   const icons = {
     plus: '<path d="M12 5v14M5 12h14"/>',
@@ -61,6 +61,27 @@ export function initModernUI({ spanish = false } = {}) {
   }
   const controls = document.querySelector(".discovery-controls");
   const original = controls.firstElementChild;
+  const layerDock = document.createElement("section");
+  layerDock.id = "layer-dock";
+  layerDock.className = "layer-dock";
+  layerDock.setAttribute(
+    "aria-label",
+    spanish ? "Capas del mapa" : "Map layers",
+  );
+  const layerTitle = document.createElement("strong");
+  layerTitle.textContent = spanish ? "Capas" : "Layers";
+  layerDock.append(layerTitle);
+  for (const id of [
+    "heat-toggle",
+    "bikes-toggle",
+    "cases-toggle",
+    "sea-events-toggle",
+    "nws-toggle",
+    "layer-opacity",
+  ]) {
+    const control = document.getElementById(id);
+    if (control) layerDock.append(control.closest("label") || control);
+  }
   const groups = [
     [
       spanish ? "Tu vista" : "Your view",
@@ -72,17 +93,6 @@ export function initModernUI({ spanish = false } = {}) {
         "major-only",
         "hide-demo",
         "stepfree-only",
-      ],
-    ],
-    [
-      spanish ? "Capas del mapa" : "Map layers",
-      [
-        "heat-toggle",
-        "bikes-toggle",
-        "cases-toggle",
-        "sea-events-toggle",
-        "nws-toggle",
-        "layer-opacity",
       ],
     ],
     [
@@ -116,28 +126,23 @@ export function initModernUI({ spanish = false } = {}) {
   }
   controls.id = "map-tools";
   controls.tabIndex = -1;
-  controls.dataset.mobileCollapsed = "true";
-  document.querySelector(".workspace").after(controls);
+  controls.hidden = true;
   const jump = document.createElement("button");
   jump.id = "tools-jump";
   jump.className = "preference";
   jump.setAttribute("aria-controls", "map-tools");
-  const jumpLabel = spanish ? "Herramientas del mapa" : "Map tools";
+  const jumpLabel = spanish ? "Más herramientas" : "More tools";
   function syncJump() {
-    const mobile = matchMedia("(max-width: 700px)").matches;
-    const expanded = !mobile || controls.dataset.mobileCollapsed === "false";
-    jump.textContent = `${expanded && mobile ? (spanish ? "Ocultar herramientas" : "Hide map tools") : jumpLabel} ${expanded && mobile ? "↑" : "↓"}`;
+    const expanded = !controls.hidden;
+    jump.textContent = `${expanded ? (spanish ? "Ocultar herramientas" : "Hide tools") : jumpLabel} ${expanded ? "↑" : "↓"}`;
     jump.setAttribute("aria-expanded", String(expanded));
   }
   jump.onclick = () => {
-    if (matchMedia("(max-width: 700px)").matches) {
-      controls.dataset.mobileCollapsed =
-        controls.dataset.mobileCollapsed === "true" ? "false" : "true";
-      syncJump();
-      if (controls.dataset.mobileCollapsed === "true") {
-        jump.focus();
-        return;
-      }
+    controls.hidden = !controls.hidden;
+    syncJump();
+    if (controls.hidden) {
+      jump.focus();
+      return;
     }
     controls.scrollIntoView({
       behavior: matchMedia("(prefers-reduced-motion: reduce)").matches
@@ -147,12 +152,13 @@ export function initModernUI({ spanish = false } = {}) {
     });
     controls.focus({ preventScroll: true });
   };
-  window.addEventListener("resize", syncJump);
   syncJump();
   document.querySelector(".personal-bar").prepend(jump);
   const bar = document.querySelector(".personal-bar");
   bar.after(
+    layerDock,
     document.querySelector("#layer-filters"),
     document.querySelector("#permit-panel"),
+    controls,
   );
 }
