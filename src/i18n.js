@@ -163,9 +163,15 @@ const en = {
     today: "Today",
     week: "Next 7 days",
     all: "All windows",
-    empty: "No permits match this window. Try another date range.",
+    empty: "No permits match. Try another search or date range.",
     disclaimer:
       "Permit schedules can change and do not confirm a live closure.",
+    searchLabel: "Search Seattle permits",
+    searchPlaceholder: "Street, project, or permit number",
+    daysAria: "Upcoming days with permit counts",
+    dayCount: "{n} permits",
+    share: "Copy link",
+    shareAria: "Copy link to {title}",
   },
   detail: {
     closeAria: "Close report details",
@@ -418,6 +424,8 @@ const en = {
     locationSelected:
       "Location selected. Choose “Report friction” to add a heads-up.",
     cityLinkCopied: "Link to {city} copied. Share it with a neighbor.",
+    permitLinkCopied: "Permit link copied. It opens this segment on the map.",
+    permitLinkUnavailable: "This permit is no longer in the current city feed.",
     centeredHome: "Map centered on your location.",
     locationUnavailable:
       "Location unavailable. Click the map to choose a spot.",
@@ -462,7 +470,7 @@ const en = {
     seattleRequestsOn:
       "{n} open Seattle maintenance requests on the map. City data refreshes daily.",
     seattleEventsOn:
-      "{n} Seattle permitted street-event segments shown. Dates are permit windows, not live closure status.",
+      "{n} of {total} Seattle permit segments match this window. Permits are not live closure status.",
     seattleEventsUnavailable:
       "Seattle street permit data is unavailable right now.",
     caseAdded: "311 case added as a friction report. Thanks!",
@@ -712,8 +720,14 @@ const es = {
     today: "Hoy",
     week: "Próximos 7 días",
     all: "Todos los períodos",
-    empty: "No hay permisos en este período. Prueba otro intervalo.",
+    empty: "No hay permisos coincidentes. Prueba otra búsqueda o fecha.",
     disclaimer: "Los horarios pueden cambiar y no confirman un cierre en vivo.",
+    searchLabel: "Buscar permisos de Seattle",
+    searchPlaceholder: "Calle, proyecto o número de permiso",
+    daysAria: "Próximos días con número de permisos",
+    dayCount: "{n} permisos",
+    share: "Copiar enlace",
+    shareAria: "Copiar enlace de {title}",
   },
   detail: {
     closeAria: "Cerrar detalles del reporte",
@@ -975,6 +989,9 @@ const es = {
     locationSelected:
       "Ubicación seleccionada. Elige “Reportar un obstáculo” para agregar un aviso.",
     cityLinkCopied: "Enlace de {city} copiado. Compártelo con un vecino.",
+    permitLinkCopied: "Enlace del permiso copiado. Abre este tramo en el mapa.",
+    permitLinkUnavailable:
+      "Este permiso ya no aparece en la fuente municipal actual.",
     centeredHome: "Mapa centrado en tu ubicación.",
     locationUnavailable:
       "Ubicación no disponible. Toca el mapa para elegir un punto.",
@@ -1022,7 +1039,7 @@ const es = {
     seattleRequestsOn:
       "{n} solicitudes de mantenimiento abiertas en Seattle. Los datos municipales se actualizan diariamente.",
     seattleEventsOn:
-      "Se muestran {n} tramos con permisos viales de Seattle. Las fechas son ventanas autorizadas, no cierres en vivo.",
+      "{n} de {total} tramos con permisos de Seattle coinciden con este período. No son cierres en vivo.",
     seattleEventsUnavailable:
       "Los datos de permisos viales de Seattle no están disponibles.",
     caseAdded: "Caso 311 agregado como reporte de fricción. ¡Gracias!",

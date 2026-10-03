@@ -6,6 +6,9 @@ test("Seattle map exposes civic requests and street permits only in Seattle", as
 }) => {
   const nextWeekday =
     (new Date(`${seattleToday()}T12:00:00Z`).getUTCDay() + 1) % 7;
+  const tomorrow = new Date(`${seattleToday()}T12:00:00Z`);
+  tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+  await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
   await page.route("**/api/enrich/cases311?city=sea", (route) =>
     route.fulfill({
       json: {
@@ -91,6 +94,33 @@ test("Seattle map exposes civic requests and street permits only in Seattle", as
   await expect(
     page.locator(".leaflet-overlay-pane path[stroke='#e87943']"),
   ).toHaveCount(0);
+  await page
+    .getByRole("searchbox", { name: "Search Seattle permits" })
+    .fill("Pike");
+  await page
+    .locator(`[data-permit-day='${tomorrow.toISOString().slice(0, 10)}']`)
+    .click();
+  await expect(page.locator("#permit-panel")).toContainText("1 of 2 segments");
+  await page
+    .getByRole("searchbox", { name: "Search Seattle permits" })
+    .fill("Broadway");
+  await expect(page.locator("#permit-panel")).toContainText("0 of 2 segments");
+  await page.locator("[data-permit-mode='all']").click();
+  await expect(page.locator("#permit-panel")).toContainText("1 of 2 segments");
+  await page.locator(".permit-share").click();
+  const permitLink = await page.evaluate(() => navigator.clipboard.readText());
+  expect(new URL(permitLink).searchParams.get("permit")).toBe("P2");
+  await page.goto(permitLink);
+  await expect(page.getByLabel("Choose city")).toHaveValue("sea");
+  await expect(page.locator(".leaflet-popup-content")).toContainText(
+    "Future festival",
+  );
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.locator("#permit-panel")).toBeVisible();
+  const mobileWidth = await page.evaluate(
+    () => document.documentElement.scrollWidth,
+  );
+  expect(mobileWidth).toBeLessThanOrEqual(390);
   await page.getByLabel("Choose city").selectOption("sf");
   await expect(page.locator("#sea-events-toggle")).toBeHidden();
   await expect(page.locator("#permit-panel")).toBeHidden();

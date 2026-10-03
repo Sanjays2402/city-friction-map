@@ -469,6 +469,24 @@ aside {
   font-weight: 700;
   white-space: nowrap;
 }
+.permit-search {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 14px;
+  color: var(--ui-muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+.permit-search input {
+  width: min(100%, 420px);
+  min-height: 38px;
+  padding: 8px 12px;
+  border: 1px solid var(--ui-border);
+  border-radius: 10px;
+  background: var(--ui-panel);
+  color: var(--ui-text);
+}
 .permit-modes {
   display: flex;
   flex-wrap: wrap;
@@ -489,10 +507,43 @@ aside {
   background: var(--ui-soft);
   color: var(--ui-ink);
 }
+.permit-days {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 7px;
+  margin: 0 0 14px;
+}
+.permit-days button {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  padding: 8px 5px;
+  border: 1px solid var(--ui-border);
+  border-radius: 10px;
+  background: var(--ui-panel);
+  color: var(--ui-muted);
+  font-size: 10px;
+}
+.permit-days button strong {
+  color: var(--ui-text);
+  font-size: 11px;
+}
+.permit-days button[aria-pressed="true"] {
+  border-color: var(--ui-accent);
+  background: var(--ui-soft);
+}
+.permit-days button:disabled {
+  opacity: 0.5;
+}
 .permit-list {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
   gap: 8px;
+}
+.permit-row {
+  position: relative;
+  min-width: 0;
 }
 .permit-item {
   display: flex;
@@ -500,13 +551,15 @@ aside {
   align-items: flex-start;
   gap: 4px;
   min-height: 58px;
-  padding: 9px 11px;
+  width: 100%;
+  padding: 9px 11px 30px;
   border: 1px solid var(--ui-border);
   border-radius: 11px;
   background: var(--ui-panel);
   color: var(--ui-muted);
   text-align: left;
   font-size: 10px;
+  min-width: 0;
 }
 .permit-item:hover,
 .permit-item:focus-visible {
@@ -517,6 +570,27 @@ aside {
   color: var(--ui-text);
   font-size: 11px;
   font-weight: 700;
+}
+.permit-share {
+  position: absolute;
+  right: 7px;
+  bottom: 7px;
+  padding: 4px 6px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ui-accent);
+  font-size: 10px;
+  font-weight: 700;
+}
+.permit-share:hover {
+  border-color: var(--ui-accent);
+  background: var(--ui-soft);
+}
+@media (max-width: 700px) {
+  .permit-days {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
 }
 .permit-empty {
   margin: 0;

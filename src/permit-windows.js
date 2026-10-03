@@ -19,6 +19,26 @@ function addDays(isoDate, count) {
   return date.toISOString().slice(0, 10);
 }
 
+export function permitWeekDays(today) {
+  if (!DATE_RE.test(today)) return [];
+  return Array.from({ length: 7 }, (_, index) => addDays(today, index));
+}
+
+export function searchPermitWindows(events, query) {
+  if (!Array.isArray(events)) return [];
+  const needle = String(query || "")
+    .trim()
+    .toLocaleLowerCase();
+  if (!needle) return events;
+  return events.filter((event) =>
+    [event.title, event.street, event.type, event.id].some((value) =>
+      String(value || "")
+        .toLocaleLowerCase()
+        .includes(needle),
+    ),
+  );
+}
+
 export function permitWindowIncludes(event, isoDate) {
   if (
     !DATE_RE.test(isoDate) ||
@@ -40,7 +60,9 @@ export function filterPermitWindows(events, mode, today) {
   const dates =
     mode === "today"
       ? [today]
-      : Array.from({ length: 7 }, (_, index) => addDays(today, index));
+      : DATE_RE.test(mode)
+        ? [mode]
+        : permitWeekDays(today);
   return events.filter((event) =>
     dates.some((date) => permitWindowIncludes(event, date)),
   );

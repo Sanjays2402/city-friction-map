@@ -4,6 +4,8 @@ import {
   seattleToday,
   permitWindowIncludes,
   filterPermitWindows,
+  permitWeekDays,
+  searchPermitWindows,
 } from "../src/permit-windows.js";
 
 test("Seattle date uses Pacific time across UTC day boundary", () => {
@@ -45,4 +47,32 @@ test("today, seven-day, and all-window filters distinguish unknown schedules", (
   assert.deepEqual(filterPermitWindows(events, "today", "2026-10-02"), []);
   assert.deepEqual(filterPermitWindows(events, "week", "2026-10-02"), [sunday]);
   assert.deepEqual(filterPermitWindows(events, "all", "2026-10-02"), events);
+  assert.deepEqual(filterPermitWindows(events, "2026-10-04", "2026-10-02"), [
+    sunday,
+  ]);
+  assert.deepEqual(permitWeekDays("2026-10-02"), [
+    "2026-10-02",
+    "2026-10-03",
+    "2026-10-04",
+    "2026-10-05",
+    "2026-10-06",
+    "2026-10-07",
+    "2026-10-08",
+  ]);
+});
+
+test("permit search matches public project, street, type, or permit number", () => {
+  const events = [
+    { id: "P1", title: "Play Street", street: "Pine St", type: "Festival" },
+    {
+      id: "P2",
+      title: "Utility work",
+      street: "Broadway",
+      type: "Construction",
+    },
+  ];
+  assert.deepEqual(searchPermitWindows(events, "  PINE  "), [events[0]]);
+  assert.deepEqual(searchPermitWindows(events, "construction"), [events[1]]);
+  assert.deepEqual(searchPermitWindows(events, "p2"), [events[1]]);
+  assert.deepEqual(searchPermitWindows(events, ""), events);
 });

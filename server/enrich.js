@@ -140,7 +140,7 @@ export function projectSeattleEvents(city, rows, today) {
       days,
       path,
     });
-    if (events.length >= 100) break;
+    if (events.length >= 200) break;
   }
   return {
     available: true,

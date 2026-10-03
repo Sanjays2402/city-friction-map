@@ -23,7 +23,12 @@ import {
 import { corridorReports, clampWidth } from "./tripcheck.js";
 import { toGeoJSON, parseImport, validateImportFeature } from "./geojson.js";
 import { forwardSummary } from "./forward.js";
-import { filterPermitWindows, seattleToday } from "./permit-windows.js";
+import {
+  filterPermitWindows,
+  permitWeekDays,
+  searchPermitWindows,
+  seattleToday,
+} from "./permit-windows.js";
 import { isTypingTarget, shortcutFor } from "./shortcuts.js";
 import {
   weatherLabel,
@@ -74,6 +79,7 @@ initTheme();
 // refreshes the list from the server and mounts the switcher.
 let cities = publicCities();
 const cityInUrl = new URL(location.href).searchParams.get("city");
+const permitInUrl = new URL(location.href).searchParams.get("permit");
 let city = resolveCity(
   cities,
   cities.some((candidate) => candidate.id === cityInUrl)
@@ -711,9 +717,13 @@ async function switchCity(id, opts = {}) {
   if (!next) return;
   if (next.id === city.id && !opts.keepReport) return;
   city = next;
+  pendingPermitId = null;
+  permitQuery = "";
+  permitMode = "week";
   if (!embedMode && location.pathname === "/") {
     const url = new URL(location.href);
     url.searchParams.set("city", city.id);
+    url.searchParams.delete("permit");
     history.replaceState(null, "", url);
   }
   liveContext.cityChanged();
@@ -1113,6 +1123,8 @@ let bikesOn = false,
   seaEventsOn = false,
   seaEventData = [],
   permitMode = "week",
+  permitQuery = "",
+  pendingPermitId = permitInUrl,
   permitLines = new Map(),
   nwsOn = false,
   caseData = [],
@@ -1431,7 +1443,8 @@ $("#cases-toggle").onclick = async () => {
     toast(t("toasts.casesUnavailable"));
   }
 };
-$("#sea-events-toggle").onclick = async () => {
+$("#sea-events-toggle").onclick = toggleSeattleEvents;
+async function toggleSeattleEvents() {
   if (city.id !== "sea") return;
   seaEventsOn = !seaEventsOn;
   $("#sea-events-toggle").setAttribute("aria-pressed", String(seaEventsOn));
@@ -1447,8 +1460,19 @@ $("#sea-events-toggle").onclick = async () => {
     if (city.id !== "sea" || !seaEventsOn) return;
     if (!data.available) throw new Error("unavailable");
     seaEventData = data.events;
-    drawSeattleEvents();
-    toast(t("toasts.seattleEventsOn", { n: data.events.length }));
+    const shown = drawSeattleEvents();
+    if (pendingPermitId) {
+      const id = pendingPermitId;
+      pendingPermitId = null;
+      const linked = seaEventData.find((event) => event.id === id);
+      if (linked) {
+        permitMode = "all";
+        permitQuery = "";
+        drawSeattleEvents();
+        focusPermit(linked);
+      } else toast(t("toasts.permitLinkUnavailable"));
+    }
+    toast(t("toasts.seattleEventsOn", { n: shown, total: data.events.length }));
   } catch {
     if (city.id !== "sea") return;
     seaEventsOn = false;
@@ -1459,15 +1483,12 @@ $("#sea-events-toggle").onclick = async () => {
     $("#sea-events-toggle").setAttribute("aria-pressed", "false");
     toast(t("toasts.seattleEventsUnavailable"));
   }
-};
+}
 function drawSeattleEvents() {
   seaEventLayer.clearLayers();
   permitLines.clear();
-  const matching = filterPermitWindows(
-    seaEventData,
-    permitMode,
-    seattleToday(),
-  );
+  const searched = searchPermitWindows(seaEventData, permitQuery);
+  const matching = filterPermitWindows(searched, permitMode, seattleToday());
   for (const event of matching) {
     const line = L.polyline(event.path, {
       color: "#e87943",
@@ -1480,9 +1501,16 @@ function drawSeattleEvents() {
     );
     permitLines.set(event, line);
   }
-  renderPermitExplorer(matching);
+  renderPermitExplorer(matching, searched);
+  return matching.length;
 }
-function renderPermitExplorer(matching = []) {
+function focusPermit(event) {
+  const line = permitLines.get(event);
+  if (!line) return;
+  map.fitBounds(line.getBounds().pad(0.5), { maxZoom: 15 });
+  line.openPopup();
+}
+function renderPermitExplorer(matching = [], searched = []) {
   const panel = $("#permit-panel");
   panel.hidden = city.id !== "sea" || !seaEventsOn;
   if (panel.hidden) {
@@ -1492,7 +1520,8 @@ function renderPermitExplorer(matching = []) {
   const sorted = [...matching].sort((a, b) =>
     (a.start || a.end).localeCompare(b.start || b.end),
   );
-  panel.innerHTML = `<div class="permit-head"><div><h2>${t("permits.title")}</h2><p>${t("permits.subtitle")}</p></div><span class="permit-count">${t("permits.count", { shown: matching.length, total: seaEventData.length })}</span></div><div class="permit-modes" role="group" aria-label="${t("permits.filterAria")}">${[
+  const today = seattleToday();
+  panel.innerHTML = `<div class="permit-head"><div><h2>${t("permits.title")}</h2><p>${t("permits.subtitle")}</p></div><span class="permit-count">${t("permits.count", { shown: matching.length, total: seaEventData.length })}</span></div><label class="permit-search"><span>${t("permits.searchLabel")}</span><input type="search" value="${escape(permitQuery)}" placeholder="${t("permits.searchPlaceholder")}" aria-label="${t("permits.searchLabel")}" maxlength="100"></label><div class="permit-modes" role="group" aria-label="${t("permits.filterAria")}">${[
     ["today", t("permits.today")],
     ["week", t("permits.week")],
     ["all", t("permits.all")],
@@ -1501,13 +1530,26 @@ function renderPermitExplorer(matching = []) {
       ([mode, label]) =>
         `<button type="button" data-permit-mode="${mode}" aria-pressed="${mode === permitMode}">${label}</button>`,
     )
+    .join(
+      "",
+    )}</div><div class="permit-days" role="group" aria-label="${t("permits.daysAria")}">${permitWeekDays(
+    today,
+  )
+    .map((day) => {
+      const label = new Intl.DateTimeFormat(
+        currentLang() === "es" ? "es-ES" : "en-US",
+        { timeZone: "UTC", weekday: "short", day: "numeric" },
+      ).format(new Date(`${day}T12:00:00Z`));
+      const count = filterPermitWindows(searched, day, today).length;
+      return `<button type="button" data-permit-day="${day}" aria-pressed="${day === permitMode}"><strong>${escape(label)}</strong><span>${t("permits.dayCount", { n: count })}</span></button>`;
+    })
     .join("")}</div><div class="permit-list">${
     sorted.length
       ? sorted
           .slice(0, 5)
           .map(
             (event, index) =>
-              `<button type="button" class="permit-item" data-permit-index="${index}"><span class="permit-item-title">${escape(event.title)}</span><span>${escape(event.street || event.type)} · ${escape(event.start || "?")}–${escape(event.end)}</span></button>`,
+              `<div class="permit-row"><button type="button" class="permit-item" data-permit-index="${index}"><span class="permit-item-title">${escape(event.title)}</span><span>${escape(event.street || event.type)} · ${escape(event.start || "?")}–${escape(event.end)}</span></button><button type="button" class="permit-share" data-permit-share="${index}" aria-label="${t("permits.shareAria", { title: escape(event.title) })}">${t("permits.share")}</button></div>`,
           )
           .join("")
       : `<p class="permit-empty">${t("permits.empty")}</p>`
@@ -1518,13 +1560,38 @@ function renderPermitExplorer(matching = []) {
       drawSeattleEvents();
     };
   });
+  panel.querySelectorAll("[data-permit-day]").forEach((button) => {
+    button.onclick = () => {
+      permitMode = button.dataset.permitDay;
+      drawSeattleEvents();
+    };
+  });
+  panel.querySelector(".permit-search input").oninput = (event) => {
+    const caret = event.target.selectionStart;
+    permitQuery = event.target.value.slice(0, 100);
+    drawSeattleEvents();
+    const input = panel.querySelector(".permit-search input");
+    input.focus();
+    input.setSelectionRange(caret, caret);
+  };
   panel.querySelectorAll("[data-permit-index]").forEach((button) => {
     button.onclick = () => {
       const event = sorted[Number(button.dataset.permitIndex)];
-      const line = permitLines.get(event);
-      if (!line) return;
-      map.fitBounds(line.getBounds().pad(0.5), { maxZoom: 15 });
-      line.openPopup();
+      focusPermit(event);
+    };
+  });
+  panel.querySelectorAll("[data-permit-share]").forEach((button) => {
+    button.onclick = async () => {
+      const event = sorted[Number(button.dataset.permitShare)];
+      const url = new URL("/", location.href);
+      url.searchParams.set("city", "sea");
+      url.searchParams.set("permit", event.id);
+      try {
+        await navigator.clipboard.writeText(url.href);
+        toast(t("toasts.permitLinkCopied"));
+      } catch {
+        toast(t("toasts.copyManually"));
+      }
     };
   });
 }
@@ -2651,7 +2718,12 @@ $("#lang-select").onchange = (e) => {
   // Rebuild the UI in the new language; city and filters persist.
   location.reload();
 };
-loadCities();
+loadCities().then(() => {
+  if (city.id === "sea" && pendingPermitId) {
+    permitMode = "all";
+    toggleSeattleEvents();
+  }
+});
 syncNow();
 refresh();
 setInterval(refresh, 15000);
