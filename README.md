@@ -19,7 +19,9 @@ A community-powered map for the small obstacles that interrupt everyday life: lo
   <tr><td>Desktop dashboard</td><td>Map-first phone view</td></tr>
 </table>
 
-[Quick start](#quick-start) · [Features](#what-you-can-do) · [Screenshots](#screenshots) · [Data sources](#real-data-clear-boundaries) · [Engineering notes](docs/architecture.md)
+**[Run the local map demo →](#quick-start)** · [Features](#what-you-can-do) · [Screenshots](#screenshots) · [Data sources](#real-data-clear-boundaries) · [Engineering notes](docs/architecture.md)
+
+**Start with a quick tour:** launch the local demo, filter a category, open a fictional report, then try a trip check. Desktop and mobile previews are shown above.
 
 ## What you can do
 
