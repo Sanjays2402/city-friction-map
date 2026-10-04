@@ -61,6 +61,19 @@ try {
   await capture(page.locator("#area-brief-dialog"), "area-brief");
   await page.locator("#area-brief-dialog .close").click();
   await page.locator("#tools-jump").click();
+  const trip = await browser.newPage({
+    viewport: { width: 1000, height: 900 },
+    deviceScaleFactor: 1,
+    colorScheme: "light",
+    reducedMotion: "reduce",
+  });
+  await trip.goto(
+    `${base}/?city=sf&route=37.77680,-122.41040;37.78440,-122.40780&width=350`,
+  );
+  await trip.locator(".report-card").first().waitFor();
+  await expect(trip.locator(".trip-stop")).toHaveCount(2);
+  await capture(trip.locator("#trip-panel"), "trip-check");
+  await trip.close();
 
   await page.locator("#personalize").click();
   await page.locator('[data-color="blue"]').click();

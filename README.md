@@ -27,7 +27,7 @@ A community-powered map for the small obstacles that interrupt everyday life: lo
 
 - **Find a heads-up.** Search places or reports; filter by category, severity, age, visible map area, or step-free impact. Switch between San Francisco, Seattle, and New York without mixing their reports.
 - **Contribute and verify.** Pin a report, attach a photo, leave a neighbor note, confirm an obstacle, or vote it cleared. Two clearance votes resolve a report; nearby duplicates can merge.
-- **Plan around friction.** Draw a trip corridor, inspect a severity heatmap, or create alert zones. Trip check highlights nearby reports; it is not turn-by-turn navigation.
+- **Plan around friction.** Draw a trip corridor, see nearby, major-impact, and step-free-impact report counts, then copy a link that restores your route and corridor width. You can also inspect a severity heatmap or create alert zones. Trip check is not turn-by-turn navigation or a passability guarantee.
 - **Get an area brief.** Summarize active reports inside the current map view, including major and step-free impacts, recent updates, and common categories. Copy the brief or a link that restores the city's map center and zoom; it is not a frozen data snapshot.
 - **Follow and personalize.** Save reports, follow updates, bookmark named views, and explore trends. Choose the glowing green, red, yellow, or blue accent, plus light/dark mode and English/Spanish.
 - **Use public context.** Toggle city-specific bike-share, maintenance-request, street-permit, and weather layers. Seattle adds a permit explorer with search, upcoming windows, and shareable segment links.
@@ -48,7 +48,7 @@ npm run dev
 
 Open [localhost:3000](http://localhost:3000). San Francisco starts with **fictional, labeled demo reports**; Seattle and New York start without seeded reports. You can also open [Seattle directly](http://localhost:3000/?city=sea).
 
-**A two-minute tour:** choose a category → open a report → toggle a map layer → open **Area brief** under **More tools** → copy a view link. On phones, the map stays near the top; profile and “Report here” are also inside **More tools**.
+**A two-minute tour:** choose a category → open a report → toggle a map layer → use **Trip check** under **More tools** to draw and share a corridor → open **Area brief** to summarize the visible map. On phones, the map stays near the top; profile and “Report here” are also inside **More tools**.
 
 For a production build:
 
@@ -73,6 +73,13 @@ On phones, the report list scrolls with the page instead of trapping gestures in
 <summary><strong>Area brief · shareable map view</strong></summary>
 
 ![Area brief with report counts, top categories, and actions to copy a summary or view link](docs/screenshots/area-brief.png)
+
+</details>
+
+<details>
+<summary><strong>Trip check · shareable route</strong></summary>
+
+![Route check showing nearby, major-impact, and step-free-impact report counts with a route-link action](docs/screenshots/trip-check.png)
 
 </details>
 
@@ -192,7 +199,7 @@ In another terminal:
 node scripts/screenshots.js http://127.0.0.1:3200
 ```
 
-The script captures ten PNGs in `docs/screenshots/`, uses real public feeds, and never submits reports, votes, or comments. It requires Chromium from the installation step above. Stop the demo server when finished; its in-memory data is discarded.
+The script captures eleven PNGs in `docs/screenshots/`, uses real public feeds, and never submits reports, votes, or comments. It requires Chromium from the installation step above. Stop the demo server when finished; its in-memory data is discarded.
 
 ## Scope and limitations
 

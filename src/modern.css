@@ -1101,6 +1101,78 @@ dialog::backdrop {
 body.embed .personal-bar {
   display: none;
 }
+
+#trip-panel.trip-panel {
+  background: var(--ui-soft);
+  border: 1px solid var(--ui-edge);
+  border-radius: 18px;
+  padding: 16px;
+}
+#trip-panel .trip-head h2,
+#trip-panel .trip-width strong {
+  color: var(--ui-ink);
+}
+#trip-panel .trip-head button,
+#trip-panel .trip-actions button {
+  border: 1px solid var(--ui-edge);
+  border-radius: 10px;
+  background: var(--surface, #fff);
+  color: var(--ui-ink);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 9px 12px;
+  min-height: 38px;
+}
+#trip-panel .trip-actions button:hover {
+  border-color: var(--ui-accent);
+}
+#trip-panel .trip-actions button:disabled {
+  opacity: 0.5;
+}
+#trip-panel .trip-width input {
+  accent-color: var(--ui-accent);
+}
+.trip-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 12px 0;
+}
+.trip-summary > div {
+  display: grid;
+  gap: 3px;
+  padding: 12px;
+  border: 1px solid var(--ui-edge);
+  border-radius: 12px;
+  background: var(--surface, #fff);
+}
+.trip-summary strong {
+  font-size: 21px;
+  line-height: 1;
+  color: var(--ui-ink);
+}
+.trip-summary span {
+  font-size: 10px;
+  line-height: 1.25;
+}
+#trip-panel .trip-caution {
+  line-height: 1.45;
+  margin: 4px 0 10px;
+}
+.trip-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 12px;
+}
+.trip-actions span {
+  font-size: 11px;
+}
+[data-theme="dark"] #trip-panel .trip-head button,
+[data-theme="dark"] #trip-panel .trip-actions button,
+[data-theme="dark"] .trip-summary > div {
+  background: #17231c;
+}
 @media print {
   .personal-bar {
     display: none !important;

@@ -170,7 +170,7 @@ const en = {
     radiusKm: "{n} km radius",
   },
   trip: {
-    title: "🛣 Trip check",
+    title: "Trip check",
     clear: "Clear route",
     hintStart:
       "Click the map to drop route stops — two or more draw your route. Drag stops to fine-tune.",
@@ -178,7 +178,16 @@ const en = {
       "{stops} stops · {hits} friction report{s} within {w} m of your route. Drag stops to adjust.",
     widthLabel: "Corridor width",
     widthM: "{n} m",
-    clearCorridor: "Clear corridor — nothing reported along this route.",
+    reports: "Nearby reports",
+    major: "Major impact",
+    stepFree: "Step-free impact",
+    caution:
+      "Community reports only. No reports does not guarantee a passable route.",
+    demo: "Includes {n} labeled demo reports.",
+    share: "Copy route link",
+    copied: "Route link copied.",
+    tooManyStops: "Share links support up to 30 stops.",
+    clearCorridor: "No community reports found in this corridor.",
     stopTooltip: "Stop {n} · drag to move",
   },
   layers: {
@@ -762,7 +771,7 @@ const es = {
     radiusKm: "radio de {n} km",
   },
   trip: {
-    title: "🛣 Revisar ruta",
+    title: "Revisar ruta",
     clear: "Borrar ruta",
     hintStart:
       "Toca el mapa para poner paradas — con dos o más se dibuja tu ruta. Arrastra las paradas para ajustar.",
@@ -770,7 +779,16 @@ const es = {
       "{stops} paradas · {hits} reporte{s} de fricción a menos de {w} m de tu ruta. Arrastra las paradas para ajustar.",
     widthLabel: "Ancho del corredor",
     widthM: "{n} m",
-    clearCorridor: "Corredor despejado — nada reportado en esta ruta.",
+    reports: "Reportes cercanos",
+    major: "Impacto grave",
+    stepFree: "Impacto en accesibilidad",
+    caution:
+      "Solo reportes comunitarios. La ausencia de reportes no garantiza una ruta transitable.",
+    demo: "Incluye {n} reportes de demostración etiquetados.",
+    share: "Copiar enlace de ruta",
+    copied: "Enlace de ruta copiado.",
+    tooManyStops: "Los enlaces admiten hasta 30 paradas.",
+    clearCorridor: "No hay reportes comunitarios en este corredor.",
     stopTooltip: "Parada {n} · arrastra para mover",
   },
   layers: {

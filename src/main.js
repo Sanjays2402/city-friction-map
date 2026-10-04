@@ -21,7 +21,13 @@ import {
   onOnline,
   isOnline,
 } from "./offline.js";
-import { corridorReports, clampWidth } from "./tripcheck.js";
+import {
+  corridorReports,
+  clampWidth,
+  readTripLink,
+  tripLink,
+  tripSummary,
+} from "./tripcheck.js";
 import { toGeoJSON, parseImport, validateImportFeature } from "./geojson.js";
 import { forwardSummary } from "./forward.js";
 import {
@@ -88,6 +94,7 @@ let city = resolveCity(
     : readStoredCity(localStorage),
 );
 const initialAreaView = readAreaView(location.search, city.id);
+const initialTripLink = readTripLink(location.search, city.id);
 // Embeddable map: /embed?city=sea renders the same app with a slim chrome
 // (body.embed hides everything but the map) for iframe embeds.
 const embedMode = location.pathname === "/embed";
@@ -796,7 +803,8 @@ async function switchCity(id, opts = {}) {
     const url = new URL(location.href);
     url.searchParams.set("city", city.id);
     url.searchParams.delete("permit");
-    for (const key of ["lat", "lng", "zoom"]) url.searchParams.delete(key);
+    for (const key of ["lat", "lng", "zoom", "route", "width"])
+      url.searchParams.delete(key);
     history.replaceState(null, "", url);
   }
   liveContext.cityChanged();
@@ -1057,7 +1065,15 @@ let tripPath = [],
   tripWidthM = 250,
   heatHours = 0;
 let heatLayer = null;
+function clearTripUrl() {
+  if (!location.search.includes("route=")) return;
+  const url = new URL(location.href);
+  url.searchParams.delete("route");
+  url.searchParams.delete("width");
+  history.replaceState(null, "", url);
+}
 function tripClick(latlng) {
+  clearTripUrl();
   tripPath.push(latlng);
   redrawTrip();
 }
@@ -1076,6 +1092,7 @@ function redrawTrip() {
       .addTo(tripLayer)
       .bindTooltip(t("trip.stopTooltip", { n: i + 1 }));
     stop.on("dragend", () => {
+      clearTripUrl();
       tripPath[i] = stop.getLatLng();
       redrawTrip();
     });
@@ -1095,6 +1112,7 @@ function renderTripPanel() {
   }
   panel.hidden = false;
   const hits = corridorReports(reports, tripPath, tripWidthM);
+  const summary = tripSummary(hits);
   const hint =
     tripPath.length < 2
       ? t("trip.hintStart")
@@ -1108,6 +1126,9 @@ function renderTripPanel() {
     `<div class="trip-head"><h2>${t("trip.title")}</h2><button id="trip-clear">${t("trip.clear")}</button></div>` +
     `<p>${hint}</p>` +
     `<label class="trip-width">${t("trip.widthLabel")} <input id="trip-width" type="range" min="50" max="2000" step="50" value="${tripWidthM}" aria-label="${t("trip.widthLabel")}"> <strong>${t("trip.widthM", { n: tripWidthM })}</strong></label>` +
+    (tripPath.length >= 2
+      ? `<div class="trip-summary"><div><strong>${summary.total}</strong><span>${t("trip.reports")}</span></div><div><strong>${summary.major}</strong><span>${t("trip.major")}</span></div><div><strong>${summary.stepFree}</strong><span>${t("trip.stepFree")}</span></div></div><p class="trip-caution">${t("trip.caution")}${summary.demo ? ` ${t("trip.demo", { n: summary.demo })}` : ""}</p><div class="trip-actions"><button type="button" id="trip-share" ${tripPath.length > 30 ? "disabled" : ""}>${t("trip.share")}</button>${tripPath.length > 30 ? `<span>${t("trip.tooManyStops")}</span>` : ""}</div>`
+      : "") +
     (hits.length
       ? `<ul class="trip-hits">${hits
           .map(
@@ -1119,13 +1140,26 @@ function renderTripPanel() {
         ? `<p class="comments-empty">${t("trip.clearCorridor")}</p>`
         : "");
   $("#trip-width").oninput = (e) => {
+    clearTripUrl();
     tripWidthM = clampWidth(e.target.value);
     renderTripPanel();
   };
   $("#trip-clear").onclick = () => {
+    clearTripUrl();
     tripPath = [];
     redrawTrip();
   };
+  if (tripPath.length >= 2 && tripPath.length <= 30)
+    $("#trip-share").onclick = async () => {
+      try {
+        await navigator.clipboard.writeText(
+          tripLink(location.href, city.id, tripPath, tripWidthM),
+        );
+        toast(t("trip.copied"));
+      } catch {
+        toast(t("toasts.copyManually"));
+      }
+    };
   panel
     .querySelectorAll("[data-trip-report]")
     .forEach((b) =>
@@ -1136,6 +1170,7 @@ $("#trip-toggle").onclick = () => {
   tripMode = !tripMode;
   $("#trip-toggle").setAttribute("aria-pressed", String(tripMode));
   if (!tripMode) {
+    clearTripUrl();
     tripPath = [];
     tripLayer.clearLayers();
   }
@@ -2823,6 +2858,18 @@ $("#lang-select").onchange = (e) => {
   location.reload();
 };
 loadCities().then(() => {
+  if (initialTripLink) {
+    tripMode = true;
+    tripPath = initialTripLink.path;
+    tripWidthM = initialTripLink.widthM;
+    $("#trip-toggle").setAttribute("aria-pressed", "true");
+    redrawTrip();
+    if (!initialAreaView)
+      map.fitBounds(L.latLngBounds(tripPath), {
+        padding: [50, 50],
+        maxZoom: 16,
+      });
+  }
   if (city.id === "sea" && pendingPermitId) {
     permitMode = "all";
     toggleSeattleEvents();
