@@ -21,10 +21,14 @@ async function capture(target, name, fullPage = false) {
 async function ready(page) {
   await page.evaluate(() => document.fonts.ready);
   await page.waitForFunction(
-    () =>
-      [...document.querySelectorAll(".leaflet-tile")].every(
-        (img) => img.complete,
-      ),
+    () => {
+      const tiles = [...document.querySelectorAll(".leaflet-tile")];
+      return (
+        tiles.length > 0 &&
+        tiles.every((img) => img.complete) &&
+        tiles.some((img) => img.naturalWidth > 0)
+      );
+    },
     null,
     { timeout: 15000 },
   );
@@ -52,6 +56,11 @@ try {
   await page.locator(".report-card").first().waitFor();
   await ready(page);
   await capture(page, "desktop", true);
+  await page.locator("#tools-jump").click();
+  await page.locator("#area-brief-toggle").click();
+  await capture(page.locator("#area-brief-dialog"), "area-brief");
+  await page.locator("#area-brief-dialog .close").click();
+  await page.locator("#tools-jump").click();
 
   await page.locator("#personalize").click();
   await page.locator('[data-color="blue"]').click();
@@ -100,16 +109,17 @@ try {
   await capture(page, "seattle", true);
   await page.locator(".permit-expand").click();
   await capture(page.locator("#permit-panel"), "seattle-explorer");
-  await page.getByLabel("Choose city").selectOption("sf");
-
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.evaluate(() => {
-    document.activeElement?.blur();
-    document.querySelector(".personal-bar").scrollLeft = 0;
-    window.scrollTo(0, 0);
+  const mobile = await browser.newPage({
+    viewport: { width: 390, height: 844 },
+    deviceScaleFactor: 1,
+    colorScheme: "light",
+    reducedMotion: "reduce",
   });
-  await ready(page);
-  await capture(page, "mobile");
+  await mobile.goto(base);
+  await mobile.locator(".report-card").first().waitFor();
+  await ready(mobile);
+  await capture(mobile, "mobile");
+  await mobile.close();
   if (errors.length) throw Error("Browser errors: " + errors.join("; "));
   console.log("Captured " + files.length + " screenshots: " + files.join(", "));
 } finally {

@@ -35,6 +35,7 @@ export function initModernUI({ spanish = false } = {}) {
     "alerts-toggle": "bell",
     "draw-toggle": "circle",
     trends: "chart",
+    "area-brief-toggle": "map",
     leaders: "users",
     moderation: "shield",
     "export-csv": "download",
@@ -97,7 +98,13 @@ export function initModernUI({ spanish = false } = {}) {
     ],
     [
       spanish ? "Planifica y sigue" : "Plan & follow",
-      ["trip-toggle", "alerts-toggle", "draw-toggle", "trends"],
+      [
+        "trip-toggle",
+        "area-brief-toggle",
+        "alerts-toggle",
+        "draw-toggle",
+        "trends",
+      ],
     ],
     [
       spanish ? "Comunidad y datos" : "Community & data",

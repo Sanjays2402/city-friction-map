@@ -5,6 +5,7 @@ import "./accents.css";
 import "./live-context.css";
 import "./modern.css";
 import { initModernUI } from "./modern-ui.js";
+import { areaBrief, areaViewUrl, readAreaView } from "./area-brief.js";
 import { initPersonalization } from "./personalize.js";
 import { initLiveContext } from "./live-context.js";
 import { categories, distance } from "../server/domain.js";
@@ -86,6 +87,7 @@ let city = resolveCity(
     ? cityInUrl
     : readStoredCity(localStorage),
 );
+const initialAreaView = readAreaView(location.search, city.id);
 // Embeddable map: /embed?city=sea renders the same app with a slim chrome
 // (body.embed hides everything but the map) for iframe embeds.
 const embedMode = location.pathname === "/embed";
@@ -138,6 +140,10 @@ $("#app").innerHTML = `
     "",
   )}</select></label><label>${t("dialogs.report.headlineLabel")}<input name="title" required minlength="3" maxlength="100" placeholder="${t("dialogs.report.headlinePh")}"></label><label>${t("dialogs.report.locationLabel")}<input name="location" required minlength="3" maxlength="100" placeholder="${t("dialogs.report.locationPh")}"></label><div class="form-row"><label>${t("dialogs.report.latLabel")}<input name="lat" type="number" step="any" min="37.70" max="37.84" required></label><label>${t("dialogs.report.lngLabel")}<input name="lng" type="number" step="any" min="-122.53" max="-122.35" required></label></div><label>${t("dialogs.report.impactLabel")}<select name="severity"><option value="1">${t("dialogs.report.impactMinor")}</option><option value="2" selected>${t("dialogs.report.impactModerate")}</option><option value="3">${t("dialogs.report.impactMajor")}</option></select></label><label>${t("dialogs.report.descriptionLabel")}<textarea name="description" maxlength="500" rows="3" placeholder="${t("dialogs.report.descriptionPh")}"></textarea></label><label><input type="checkbox" name="stepFree"> ${t("dialogs.report.stepFree")}</label><label>${t("photo.uploadLabel")} <span class="optional-note">(${t("dialogs.report.optional")})</span><input id="photo-file" type="file" accept="image/jpeg,image/png,image/webp"><span class="form-hint">${t("photo.uploadHint")}</span><span id="photo-preview" class="photo-preview" hidden><img alt="${t("photo.previewAlt")}"><button type="button" id="photo-remove">${t("photo.remove")}</button></span></label><div id="similar-box" class="similar-box" hidden></div><p class="form-note">${t("dialogs.report.formNote")}</p><p id="form-error" role="alert"></p><button class="primary submit" type="submit">${t("dialogs.report.submit")} ↗</button></form></dialog>
 <dialog id="about-dialog"><button class="close" aria-label="${t("dialogs.about.closeAria")}">×</button><div class="eyebrow">${t("dialogs.about.eyebrow")}</div><h2>${t("dialogs.about.title")}</h2><p>${t("dialogs.about.intro")}</p><h3>${t("dialogs.about.estimatesTitle")}</h3><p>${t("dialogs.about.estimatesBody")}</p><h3>${t("dialogs.about.honestTitle")}</h3><p>${t("dialogs.about.honestBody")}</p><h3>${t("dialogs.about.shortcutsTitle")}</h3><p>${t("dialogs.about.shortcutsBody")}</p></dialog><dialog id="flag-dialog"><form id="flag-form"><div class="dialog-head"><div class="eyebrow">${t("dialogs.flag.eyebrow")}</div><button type="button" class="close" aria-label="${t("dialogs.flag.closeAria")}">×</button></div><h2>${t("dialogs.flag.title")}</h2><p>${t("dialogs.flag.intro")}</p><div class="flag-reasons"><label><input type="radio" name="reason" value="spam" required> ${t("dialogs.flag.reasonSpam")}</label><label><input type="radio" name="reason" value="inaccurate"> ${t("dialogs.flag.reasonInaccurate")}</label><label><input type="radio" name="reason" value="inappropriate"> ${t("dialogs.flag.reasonInappropriate")}</label><label><input type="radio" name="reason" value="duplicate"> ${t("dialogs.flag.reasonDuplicate")}</label></div><p id="flag-error" role="alert"></p><button class="primary submit" type="submit">${t("dialogs.flag.submit")}</button></form></dialog><dialog id="resolve-dialog"><form id="resolve-form"><div class="dialog-head"><div class="eyebrow">${t("dialogs.resolve.eyebrow")}</div><button type="button" class="close" aria-label="${t("dialogs.report.closeAria")}">×</button></div><h2>${t("dialogs.resolve.title")}</h2><p>${t("dialogs.resolve.intro")}</p><label>${t("dialogs.resolve.noteLabel")}<textarea name="note" maxlength="300" rows="3" placeholder="${t("dialogs.resolve.notePh")}"></textarea></label><p id="resolve-error" role="alert"></p><button class="primary submit" type="submit">${t("dialogs.resolve.submit")}</button></form></dialog><dialog id="alert-dialog"><form id="alert-form"><div class="dialog-head"><div class="eyebrow">${t("dialogs.alert.eyebrow")}</div><button type="button" class="close" aria-label="${t("dialogs.alert.closeAria")}">×</button></div><h2>${t("dialogs.alert.title")}</h2><p>${t("dialogs.alert.intro")}</p><label>${t("dialogs.alert.nameLabel")}<input name="label" required minlength="1" maxlength="60" placeholder="${t("dialogs.alert.namePh")}"></label><label>${t("dialogs.alert.radiusLabel")}<select name="radiusM"><option value="100">${t("dialogs.alert.r100")}</option><option value="250" selected>${t("dialogs.alert.r250")}</option><option value="500">${t("dialogs.alert.r500")}</option><option value="1000">${t("dialogs.alert.r1km")}</option><option value="2500">${t("dialogs.alert.r25km")}</option><option value="5000">${t("dialogs.alert.r5km")}</option></select></label><p id="alert-error" role="alert"></p><button class="primary submit" type="submit">${t("dialogs.alert.submit")}</button></form></dialog><dialog id="leaders-dialog"><button class="close" aria-label="${t("dialogs.leaders.closeAria")}">×</button><div class="eyebrow">${t("dialogs.leaders.eyebrow")}</div><h2>${t("dialogs.leaders.title")}</h2><div id="leaders-list"><p class="comments-empty">Loading…</p></div></dialog><dialog id="profile-dialog"><button class="close" aria-label="${t("dialogs.profile.closeAria")}">×</button><div class="eyebrow">${t("dialogs.profile.eyebrow")}</div><h2 id="profile-title">${t("dialogs.profile.title")}</h2><div id="profile-body"><p class="comments-empty">Loading…</p></div></dialog><dialog id="trends-dialog"><button class="close" aria-label="${t("dialogs.trends.closeAria")}">×</button><div class="eyebrow">${t("dialogs.trends.eyebrow")}</div><h2>${t("dialogs.trends.title")}</h2><p>${t("dialogs.trends.intro")}</p><canvas id="trends-chart" width="640" height="300" aria-label="${t("dialogs.trends.chartAria")}"></canvas><div id="trends-legend" class="trends-legend"></div><div id="trends-stats" class="trends-stats"></div></dialog><dialog id="import-dialog"><form id="import-form"><div class="dialog-head"><div class="eyebrow">${t("dialogs.import.eyebrow")}</div><button type="button" class="close" aria-label="${t("dialogs.import.closeAria")}">×</button></div><h2>${t("dialogs.import.title")}</h2><p>${t("dialogs.import.intro")}</p><label>${t("dialogs.import.fileLabel")}<input name="file" type="file" accept=".geojson,.json,application/json" required></label><p id="import-error" role="alert"></p><p id="import-status" role="status"></p><button class="primary submit" type="submit">Import reports</button></form></dialog><dialog id="moderation-dialog"><div class="dialog-head"><div class="eyebrow">${t("moderation.eyebrow")}</div><button type="button" class="close" aria-label="${t("dialogs.report.closeAria")}">×</button></div><h2>${t("moderation.title")}</h2><div id="moderation-auth"><p>${t("moderation.needToken")}</p><label>${t("moderation.tokenLabel")}<input id="moderation-token" type="password" autocomplete="off" placeholder="${t("moderation.tokenPh")}"></label><p id="moderation-error" role="alert"></p><button class="primary submit" id="moderation-unlock">${t("moderation.unlock")}</button></div><div id="moderation-list" hidden></div></dialog><dialog id="forward-dialog"><div class="dialog-head"><div class="eyebrow">${t("dialogs.forward.eyebrow")}</div><button type="button" class="close" aria-label="${t("dialogs.report.closeAria")}">×</button></div><h2>${t("dialogs.forward.title")}</h2><p>${t("dialogs.forward.intro")}</p><label>${t("dialogs.forward.summaryLabel")}<textarea id="forward-summary" rows="12" readonly></textarea></label><p id="forward-error" role="alert"></p><div class="dialog-actions"><button class="primary submit" id="forward-copy">${t("dialogs.forward.copy")}</button></div></dialog><dialog id="lightbox-dialog"><button type="button" class="close lightbox-close" aria-label="${t("dialogs.report.closeAria")}">×</button><img id="lightbox-img" alt=""></dialog><div id="toast" role="status"></div>`;
+$("#app").insertAdjacentHTML(
+  "beforeend",
+  `<dialog id="area-brief-dialog" class="area-brief-dialog" aria-labelledby="area-brief-title"><button type="button" class="close" aria-label="${t("areaBrief.closeAria")}">×</button><div class="eyebrow">${t("areaBrief.eyebrow")}</div><h2 id="area-brief-title">${t("areaBrief.title")}</h2><p>${t("areaBrief.intro")}</p><div id="area-brief-content" aria-live="polite"></div><div class="area-brief-actions"><button type="button" id="area-brief-copy" class="preference">${t("areaBrief.copyBrief")}</button><button type="button" id="area-view-copy" class="primary">${t("areaBrief.copyLink")}</button></div></dialog>`,
+);
 $(".toolbar").insertAdjacentHTML(
   "beforebegin",
   '<section id="summary" class="summary" aria-label="City overview"></section>',
@@ -149,6 +155,10 @@ $(".toolbar").insertAdjacentHTML(
 $(".discovery-controls").insertAdjacentHTML(
   "afterend",
   `<section id="alerts-panel" class="alerts-panel" hidden aria-label="${t("alerts.panelTitle")}"></section><section id="trip-panel" class="trip-panel" hidden aria-label="Trip check"></section><section id="layer-filters" class="layer-filters" hidden aria-label="Enrichment layer filters"></section><section id="permit-panel" class="permit-panel" hidden aria-label="${t("permits.title")}"></section>`,
+);
+$("#trends").insertAdjacentHTML(
+  "beforebegin",
+  `<button id="area-brief-toggle" class="preference">${t("controls.areaBrief")}</button>`,
 );
 if (embedMode) {
   $(".map-wrap").insertAdjacentHTML(
@@ -296,6 +306,57 @@ function currentBounds() {
     east: b.getEast(),
   };
 }
+function currentAreaLink() {
+  return areaViewUrl(location.href, city.id, map.getCenter(), map.getZoom());
+}
+function renderAreaBrief() {
+  if (!$("#area-brief-dialog").open) return;
+  const brief = areaBrief(reports, currentBounds(), { hideDemo });
+  const center = map.getCenter();
+  const top = brief.categories.slice(0, 4);
+  const largest = top[0]?.count || 1;
+  const categoryRows = top
+    .map(({ id, count }) => {
+      const label = escape(categories[id]?.label || id);
+      const width = Math.round((count / largest) * 100);
+      return `<li><div><strong>${label}</strong><span>${count}</span></div><span class="area-brief-track"><span style="width:${width}%"></span></span></li>`;
+    })
+    .join("");
+  $("#area-brief-content").innerHTML =
+    `<div class="area-brief-metrics"><div><strong>${brief.total}</strong><span>${t("areaBrief.active")}</span></div><div><strong>${brief.major}</strong><span>${t("areaBrief.major")}</span></div><div><strong>${brief.recent}</strong><span>${t("areaBrief.recent")}</span></div><div><strong>${brief.stepFree}</strong><span>${t("areaBrief.stepFree")}</span></div></div>` +
+    (top.length
+      ? `<h3>${t("areaBrief.categories")}</h3><ul class="area-brief-categories">${categoryRows}</ul>`
+      : `<p class="area-brief-empty">${t("areaBrief.empty")}</p>`) +
+    (brief.demo
+      ? `<p class="area-brief-demo">${t("areaBrief.demo", { n: brief.demo })}</p>`
+      : hideDemo
+        ? `<p class="area-brief-demo">${t("areaBrief.communityOnly")}</p>`
+        : "") +
+    `<p class="area-brief-camera">${t("areaBrief.camera", { lat: center.lat.toFixed(4), lng: center.lng.toFixed(4), zoom: map.getZoom() })}</p><p class="area-brief-note">${t("areaBrief.note")}</p>`;
+}
+function areaBriefText() {
+  const brief = areaBrief(reports, currentBounds(), { hideDemo });
+  const categoryList = brief.categories
+    .map(({ id, count }) => `${categories[id]?.label || id} ${count}`)
+    .join(", ");
+  return [
+    t("areaBrief.copyHeading", { city: city.name }),
+    t("areaBrief.copyMetrics", {
+      active: brief.total,
+      major: brief.major,
+      recent: brief.recent,
+      stepFree: brief.stepFree,
+    }),
+    categoryList
+      ? t("areaBrief.copyCategories", { categories: categoryList })
+      : t("areaBrief.empty"),
+    brief.demo ? t("areaBrief.demo", { n: brief.demo }) : "",
+    t("areaBrief.disclaimer"),
+    currentAreaLink(),
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
 // "850 m" / "2.3 km" from the cached geolocation, shown on cards when the
 // list is sorted by proximity.
 function distanceLabel(r) {
@@ -390,6 +451,7 @@ function render() {
   $("#updated").textContent = lastUpdated
     ? t("footer.updated", { age: age(lastUpdated) })
     : t("footer.connecting");
+  renderAreaBrief();
 }
 function select(id) {
   selected = id;
@@ -734,6 +796,7 @@ async function switchCity(id, opts = {}) {
     const url = new URL(location.href);
     url.searchParams.set("city", city.id);
     url.searchParams.delete("permit");
+    for (const key of ["lat", "lng", "zoom"]) url.searchParams.delete(key);
     history.replaceState(null, "", url);
   }
   liveContext.cityChanged();
@@ -813,6 +876,8 @@ async function loadCities() {
   }
   city = resolveCity(cities, city.id);
   applyCityToChrome();
+  if (initialAreaView)
+    map.setView(initialAreaView.center, initialAreaView.zoom);
   initCitySwitcher({
     cities,
     current: city.id,
@@ -1967,7 +2032,28 @@ $("#area-toggle").onclick = (e) => {
 };
 map.on("moveend", () => {
   if (areaOnly) render();
+  renderAreaBrief();
 });
+$("#area-brief-toggle").onclick = () => {
+  $("#area-brief-dialog").showModal();
+  renderAreaBrief();
+};
+$("#area-brief-copy").onclick = async () => {
+  try {
+    await navigator.clipboard.writeText(areaBriefText());
+    toast(t("areaBrief.copiedBrief"));
+  } catch {
+    toast(t("toasts.copyManually"));
+  }
+};
+$("#area-view-copy").onclick = async () => {
+  try {
+    await navigator.clipboard.writeText(currentAreaLink());
+    toast(t("areaBrief.copiedLink"));
+  } catch {
+    toast(t("toasts.copyManually"));
+  }
+};
 $("#search").addEventListener("input", (e) => {
   query = e.target.value.toLowerCase();
   render();

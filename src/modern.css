@@ -809,6 +809,108 @@ dialog::backdrop {
 .close:hover {
   background: var(--ui-soft);
 }
+.area-brief-dialog {
+  width: min(560px, calc(100vw - 24px));
+  max-height: min(90vh, 780px);
+  overflow-y: auto;
+}
+.area-brief-dialog h2 {
+  margin: 10px 0 8px;
+}
+.area-brief-dialog > p {
+  margin: 0 0 18px;
+  font-size: 13px;
+  line-height: 1.55;
+}
+.area-brief-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+.area-brief-metrics > div {
+  min-width: 0;
+  padding: 12px 10px;
+  border: 1px solid var(--ui-border);
+  border-radius: 13px;
+  background: var(--ui-panel);
+}
+.area-brief-metrics strong {
+  display: block;
+  color: var(--ui-ink);
+  font-size: 22px;
+  line-height: 1.2;
+}
+.area-brief-metrics span {
+  display: block;
+  margin-top: 4px;
+  color: var(--ui-muted);
+  font-size: 10px;
+  line-height: 1.3;
+}
+.area-brief-dialog h3 {
+  margin: 20px 0 10px;
+  font-size: 13px;
+}
+.area-brief-categories {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.area-brief-categories li > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 12px;
+}
+.area-brief-categories li strong {
+  font-weight: 700;
+}
+.area-brief-categories li > div > span {
+  color: var(--ui-muted);
+}
+.area-brief-track,
+.area-brief-track > span {
+  display: block;
+  height: 6px;
+  border-radius: 99px;
+}
+.area-brief-track {
+  margin-top: 5px;
+  background: var(--ui-panel);
+}
+.area-brief-track > span {
+  background: var(--ui-accent);
+}
+.area-brief-dialog
+  :is(
+    .area-brief-empty,
+    .area-brief-demo,
+    .area-brief-camera,
+    .area-brief-note
+  ) {
+  color: var(--ui-muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+.area-brief-empty {
+  padding: 16px;
+  border-radius: 12px;
+  background: var(--ui-panel);
+}
+.area-brief-camera {
+  margin-top: 16px;
+  font-variant-numeric: tabular-nums;
+}
+.area-brief-actions {
+  display: flex;
+  gap: 9px;
+  margin-top: 18px;
+}
+.area-brief-actions button {
+  flex: 1;
+}
 .context-card {
   border-radius: 16px;
   border-color: var(--ui-edge);
@@ -979,6 +1081,9 @@ dialog::backdrop {
   :root dialog {
     padding: 25px 20px;
     border-radius: 20px;
+  }
+  .area-brief-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .bottom {
     padding: 18px;
