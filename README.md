@@ -1,8 +1,8 @@
 # City Friction Map
 
-### Less friction. More city.
+> Less friction. More city.
 
-A community-powered map of the small obstacles that interrupt everyday life: long queues, blocked sidewalks, noisy construction, empty bike docks, closed restrooms, and poor reception.
+A community-powered map for the small obstacles that interrupt everyday life: long queues, blocked sidewalks, noisy construction, empty bike docks, closed restrooms, and poor reception. Find a heads-up, add one, or check what might affect your trip.
 
 [![Verify](https://github.com/Sanjays2402/city-friction-map/actions/workflows/ci.yml/badge.svg)](https://github.com/Sanjays2402/city-friction-map/actions/workflows/ci.yml)
 ![Node.js 22.13+](https://img.shields.io/badge/Node.js-22.13%2B-426b42)
@@ -11,21 +11,26 @@ A community-powered map of the small obstacles that interrupt everyday life: lon
 
 **San Francisco · Seattle · New York** · Keyless public data · Light/dark mode · Four accent colors
 
-![Clean green dashboard with city statistics, a compact layer strip, community reports, and an interactive map](docs/screenshots/desktop.png)
+<table>
+  <tr>
+    <td width="74%"><img src="docs/screenshots/desktop.png" alt="Desktop map with community reports, category filters, and compact layer controls" /></td>
+    <td width="26%"><img src="docs/screenshots/mobile.png" alt="Map-first phone view with search, filters, and layers above the map" /></td>
+  </tr>
+  <tr><td>Desktop dashboard</td><td>Map-first phone view</td></tr>
+</table>
 
-[Quick start](#quick-start) · [Features](#what-you-can-do) · [Screenshots](#screenshots) · [Live data](#real-data-clear-boundaries) · [Engineering notes](docs/architecture.md)
+[Quick start](#quick-start) · [Features](#what-you-can-do) · [Screenshots](#screenshots) · [Data sources](#real-data-clear-boundaries) · [Engineering notes](docs/architecture.md)
 
 ## What you can do
 
-- **Explore your neighborhood.** Search places or report text; filter by category, severity, recency, visible area, or step-free impact. Switch cities without mixing their reports, and copy a city-specific link to share the view.
-- **Share and verify.** Drop a pin or use “Report here,” attach a photo, leave neighbor notes, confirm an obstacle, or vote it cleared. Two clearance votes resolve a report; nearby duplicates can merge.
-- **Plan ahead.** Draw a trip and inspect reports along its corridor, view a severity heatmap, or create alert zones. Trip check matches reports to a drawn route; it is not turn-by-turn navigation.
-- **Explore Seattle's street-level signals.** Overlay open Find It, Fix It maintenance requests and permitted street-event segments. Search permits by street or project, compare daily counts over the coming week, focus a segment, or copy a link to that permit. Permit dates are scheduled windows, not confirmed live closures.
-- **Follow what matters.** Save reports, follow updates, bookmark up to ten named map views, and explore trends. Contributions earn XP, badges, and streaks.
-- **Make it yours.** Keep the glowing green or choose red, yellow, or blue. Use dark mode, English/Spanish, keyboard shortcuts, and reduced-motion settings.
-- **Take your data with you.** Export CSV or GeoJSON, import GeoJSON reports, share report links, embed a city map, or subscribe to the RSS feed.
+- **Find a heads-up.** Search places or reports; filter by category, severity, age, visible map area, or step-free impact. Switch between San Francisco, Seattle, and New York without mixing their reports.
+- **Contribute and verify.** Pin a report, attach a photo, leave a neighbor note, confirm an obstacle, or vote it cleared. Two clearance votes resolve a report; nearby duplicates can merge.
+- **Plan around friction.** Draw a trip corridor, inspect a severity heatmap, or create alert zones. Trip check highlights nearby reports; it is not turn-by-turn navigation.
+- **Follow and personalize.** Save reports, follow updates, bookmark named views, and explore trends. Choose the glowing green, red, yellow, or blue accent, plus light/dark mode and English/Spanish.
+- **Use public context.** Toggle city-specific bike-share, maintenance-request, street-permit, and weather layers. Seattle adds a permit explorer with search, upcoming windows, and shareable segment links.
+- **Take your data with you.** Export CSV or GeoJSON, import GeoJSON reports, share city or report links, embed a city map, or subscribe to RSS.
 
-Reports persist in SQLite and refresh across browsers every 15 seconds. The PWA supports an offline shell and queued reporting; live data still requires a connection.
+Community reports persist in SQLite and refresh across browsers every 15 seconds. Public feeds, fictional demo reports, and clearance estimates are presented as different kinds of information—not as verified live street conditions. The PWA supports an offline shell and queued reporting; external feeds still require a connection.
 
 ## Quick start
 
@@ -38,10 +43,9 @@ npm ci
 npm run dev
 ```
 
-Open [localhost:3000](http://localhost:3000). San Francisco starts with **fictional, labeled demo reports**; Seattle and New York start without seeded reports.
-Open [the Seattle view](http://localhost:3000/?city=sea) directly, or use **Copy city link** under **More tools** to share a city-specific URL from any view.
+Open [localhost:3000](http://localhost:3000). San Francisco starts with **fictional, labeled demo reports**; Seattle and New York start without seeded reports. You can also open [Seattle directly](http://localhost:3000/?city=sea).
 
-**A two-minute tour:** choose a category → open a report → try the compact **Layers** strip → explore **Live context** → open **More tools** to check a trip.
+**A two-minute tour:** choose a category → open a report → toggle a map layer → open **Live context** for source-linked data → use **More tools** to check a trip or copy a city link. On phones, the map stays near the top; profile and “Report here” are inside **More tools**.
 
 For a production build:
 
@@ -54,13 +58,13 @@ This is a full-stack app: it needs a Node server and persistent SQLite storage. 
 
 ## Screenshots
 
-Fresh captures of the current interface—not design mockups. Community reports shown here are fictional demo data. Public-feed values are real point-in-time responses and may change or become unavailable.
+Fresh captures of the current interface—not design mockups. The San Francisco reports shown here are fictional demo data. Public-feed values are point-in-time responses and may change or become unavailable. Desktop and phone views are shown above.
 
 ![Seattle map with a compact permit summary above the map](docs/screenshots/seattle.png)
 
 Seattle's two city feeds appear in the compact **Layers** strip when Seattle is selected. Less-used preferences, trip planning, and data actions stay under **More tools**, folded by default on desktop and mobile. The compact permit row keeps the map visible; **Explore permits** opens search, daily counts, and shareable permit links. Entries without weekday details remain in **All windows** rather than being shown as active today. Orange dashed segments show permits, not confirmed closures.
 
-On phones, the map appears immediately below search and layers. The report list scrolls with the page instead of trapping gestures inside a short pane; the profile and “Report here” actions remain in **More tools**.
+On phones, the report list scrolls with the page instead of trapping gestures inside a short pane.
 
 <details>
 <summary><strong>Expanded permit explorer</strong></summary>
@@ -81,13 +85,12 @@ On phones, the map appears immediately below search and layers. The report list 
 | ![Daylight times, NOAA tide predictions, and regional USGS earthquakes with source links and timestamps](docs/screenshots/live-context.png) | ![Dark personalization dialog with four accent options and a form for saving map views](docs/screenshots/personalization.png) |
 | Three public sources, city-local times, and explicit availability.                                                                          | Four accents and browser-local saved views.                                                                                   |
 
-<table>
-  <tr>
-    <td width="75%"><img src="docs/screenshots/report-detail.png" alt="Community report details over the map, including estimated clearance, verification actions, and neighbor notes" /></td>
-    <td width="25%"><img src="docs/screenshots/mobile.png" alt="Phone view with compact controls and the map visible near the top" /></td>
-  </tr>
-  <tr><td>Report details and community verification</td><td>Map-first phone layout</td></tr>
-</table>
+<details>
+<summary><strong>Report details and community verification</strong></summary>
+
+![Community report details over the map, including estimated clearance, verification actions, and neighbor notes](docs/screenshots/report-detail.png)
+
+</details>
 
 <details>
 <summary><strong>Report an obstacle</strong></summary>
