@@ -210,3 +210,16 @@ Saved reports, followed reports, theme preferences, and named views are browser-
 ## Credits
 
 [Leaflet](https://leafletjs.com/) · [OpenStreetMap contributors](https://www.openstreetmap.org/copyright) ([tile policy](https://operations.osmfoundation.org/policies/tiles/)) · [Open-Meteo](https://open-meteo.com/) · [National Weather Service](https://www.weather.gov/documentation/services-web-api) · [USGS](https://earthquake.usgs.gov/) · [NOAA CO-OPS](https://tidesandcurrents.noaa.gov/) · [Sunrise-Sunset.org](https://sunrise-sunset.org/) · Bay Wheels/Citi Bike GBFS · [SF Open Data](https://data.sfgov.org/) · DM Sans and Manrope via Google Fonts.
+
+## Terms & Disclaimer
+
+By using this project you agree to the following.
+
+- **No warranty.** This software is provided "as is", without warranty of any kind, express or implied, including merchantability, fitness for a particular purpose, and non-infringement.
+- **No liability.** To the maximum extent permitted by law, the author and contributors are not liable for any claim, loss, or damage (direct, indirect, incidental, or consequential, including lost data or profits) arising from its use.
+- **Your responsibility.** You use it at your own risk and are responsible for complying with the laws that apply to you.
+- **Your data.** Keep backups; data loss is possible. If you process other people's personal information, you are responsible for complying with privacy laws such as US state privacy laws (e.g. CCPA), PIPEDA and Quebec's Law 25 (Canada), and the Digital Personal Data Protection Act, 2023 (India).
+- **Not an emergency service.** Do not use it to report emergencies or hazards that need urgent attention; contact local authorities (911 in the USA and Canada, 112 in India). You are responsible for what you post and must not post personal information about others.
+- **Third parties.** Names, logos, APIs, and services of others belong to their owners and are used for identification only; no affiliation or endorsement is implied.
+- **Your statutory rights.** Nothing here limits rights that cannot be waived by agreement, including under consumer-protection laws in the USA, Canada (including Quebec), and India (Consumer Protection Act, 2019).
+- **License.** No open-source license is granted. All rights reserved; you may view and fork this repository only as GitHub's Terms of Service allow.
